@@ -2,11 +2,30 @@
 
 Keep your ExpressLRS receivers and transmitter modules up to date without flashing them one by one. Devices that join your home WiFi are found automatically and updated to the current firmware over the network, keeping their binding phrase, regulatory domain and WiFi settings.
 
-A desktop app (plus a browser interface and a command line tool) lists every device it finds with its firmware version. With auto update turned on there is nothing to click: as soon as a newer version is out, each device is updated the next time it shows up on the network. With auto update turned off (the default), every device with an update available gets its own update button. All devices stay on the major version you choose in the settings (for example 3.x), so receivers and transmitters keep their link. Until you have chosen it once, devices are only listed, not flashed. Only final releases are installed, unless you turn on release candidates in the settings. A device is never flashed back to an older version, a custom build (one that reports a branch name instead of a version) only by its own button, and firmware that a device reports as not matching its hardware is never forced onto it.
+Desktop app for macOS, Windows and Linux, in English and German (chosen at the bottom of the sidebar). For advanced use, a [browser interface](docs/browser-interface.md) and a [command line tool](docs/command-line.md) are available when running from source.
 
-Work in progress: the desktop app, the browser interface and the command line tool find devices, tell which ones have an update, flash a device on request and, with auto update on, keep watching the network and update devices as they show up. Flashing builds the same file as the ExpressLRS tools and has been tested on a RadioMaster RP4TD (ESP32 receiver), a RadioMaster RP1 (ESP8285 receiver) and a transmitter module. There is no release yet; the desktop app can be built from the source (see Development).
+<!-- ![The devices page with several receivers and a transmitter module](docs/screenshots/devices.png) -->
+> 📷 *Screenshot to follow: the Devices page with several receivers and a transmitter module (`docs/screenshots/devices.png`)*
 
-## Desktop app
+**Work in progress:** finding devices, showing which ones have an update, flashing on request and auto update all work. Flashing builds the same file as the ExpressLRS tools and has been tested on a RadioMaster RP4TD (ESP32 receiver), a RadioMaster RP1 (ESP8285 receiver) and a transmitter module. There is no release yet; until then the app can be [built from source](docs/development.md).
+
+## What it does
+
+- **Finds your devices** on the home WiFi, also where mDNS is blocked, and shows each one with its firmware version and whether an update is available.
+- **Updates them over WiFi**, with one click per device, or by itself with auto update turned on: as soon as a newer version is out, each device is updated the next time it shows up.
+- **Keeps your settings**: binding phrase, regulatory domain, WiFi and the other options stay as they are.
+- **Keeps the link**: all devices stay on the major version you choose (for example 3.x), so receivers and transmitters keep working together.
+- **Includes the ExpressLRS Web Flasher** for everything else: any version, your own binding phrase, flashing over a cable.
+
+It is careful by design:
+
+- Until you have chosen the target version once, devices are only listed, not flashed.
+- Only final releases are installed, unless you turn on release candidates.
+- A device is never flashed back to an older version.
+- A custom build (one that reports a branch name instead of a version) is only flashed with its own button.
+- Firmware that a device reports as not matching its hardware is never forced onto it.
+
+## Install
 
 From the first release on, download the app from the [Releases](https://github.com/Mariator-pro/elrs-auto-flash/releases) page:
 
@@ -26,10 +45,6 @@ The app needs the local network to find devices:
 - **macOS** asks on first start whether ELRS Auto Flash may find devices on the local network. Allow it; if you said no, turn it on in System Settings, Privacy & Security, Local Network, and start the app again.
 - **Windows** may ask whether ELRS Auto Flash may use the network (Windows Defender Firewall). Allow it for private networks.
 
-The window shows the same interface as the browser (below). Closing it quits the app; while a device is being flashed it asks first (a device cut off keeps its old firmware and gets the update next time). Auto update only runs while the app is open.
-
-In the app, the Web Flasher page flashes over a cable without Chrome or Edge: when the Web Flasher connects, the app asks which port the device is on. Files the Web Flasher saves (firmware file, Lua script) go to the Downloads folder, which then opens with the file selected. Links to guides open in your browser. Flashing STM32 devices with an ST-Link does not work in the app (use the browser interface in Chrome or Edge for that). The Web Flasher keeps the binding phrase and WiFi details you type in; the app deletes them when it quits, unless you turn on "Remember Web Flasher entries" in the settings (then they stay on the computer unencrypted, as in a browser).
-
 ### Updating the app
 
 On start the app looks for a newer release and shows it at the top left:
@@ -38,87 +53,91 @@ On start the app looks for a newer release and shows it at the top left:
 - **Windows (portable)**: "Download" opens the release page; unzip the new version and delete the old folder.
 - **macOS**: "Download" opens the release page. Install the new version like the first one; the app replaces the old one in Applications. macOS accepts an in-place update only for apps signed with an Apple certificate, which this one is not.
 
-## Browser interface
+## Using it
 
-Requires [Node.js](https://nodejs.org) 22.18 or newer.
+### 1. Choose the target version
 
-```sh
-npm install
-npm run build
-npm start
-```
+On first start the Devices page asks you to choose a target version. Open "Settings" and pick the major version your transmitters run: transmitters and receivers need the same major version. Until then, nothing is flashed. When a newer major version comes out, the Devices page tells you; switch in the settings once your transmitters run it.
 
-`npm start` opens the interface in the browser. It keeps looking for devices and lists each one as a card with its version, the target version and its state. The sidebar holds the auto update switch and the target version; choose the target version once under Settings. With auto update off, each device with an update gets its own update button; a custom build gets a button too, with a note on what flashing it can reset. Devices of the same kind share one name (the one the ELRS Lua script shows, e.g. RM RP4TD 2400), so each card has a pencil button to give the device its own name as well; without one, the last 4 digits of its MAC tell them apart. Devices whose firmware did not match their target, or that failed 3 times, show a notice with an Allow again button (with auto update on they are flashed again right away); a single attempt that stopped or failed shows on the card until the next one. Activity lists what happened since the start, grouped by minute; a flash takes one line with the old and new version, and devices that did the same at once (all found at the start, or after a new target version) share one line that opens up. Stop it with Ctrl+C in the terminal; a running flash is finished first.
+<!-- ![The settings page with the target version](docs/screenshots/settings.png) -->
+> 📷 *Screenshot to follow: the Settings page with the target version (`docs/screenshots/settings.png`)*
 
-The Web Flasher page shows the [ExpressLRS Web Flasher](https://expresslrs.github.io/web-flasher/) inside the interface, for everything this app leaves out on purpose: any version including older ones, with your own binding phrase and WiFi details, flashed over a cable or saved as a file to upload over WiFi (for example a new receiver that does not know your home network yet). Its safety rules do not apply there. It needs internet; flashing over a cable works in Chrome and Edge only (Safari and Firefox lack Web Serial). Once a device knows your home network, it shows up under Devices and is kept up to date over WiFi.
+### 2. Bring your devices onto the network
 
-Starting it a second time opens the running interface instead of starting another one, and `watch` (below) refuses to start while it runs, so two processes never flash the same device. The desktop app does not start while the browser interface runs (it asks you to quit that first), and `npm start` while the app runs opens the app's interface in the browser.
+A device is only on the network while its WiFi is on:
 
-## Find devices
+- **Receiver**: power it without its transmitter (keep the radio off) and wait about a minute, the "WiFi on interval" (60 seconds by default).
+- **Transmitter module**: turn on WiFi in the ELRS Lua script on the radio.
 
-The same from the command line:
+To join your home network instead of opening its own network ("ExpressLRS RX" or "ExpressLRS TX"), a device needs your home network set up once in its web page. For a new device that does not know your home network yet, use the [Web Flasher](#6-web-flasher).
 
-```sh
-npm run cli -- settings --target-major 4
-npm run cli -- list
-```
+### 3. Devices
 
-`settings --target-major` sets the major version all devices are kept on (`none` clears it). Choose the one your transmitters run: transmitters and receivers need the same major version. `settings` alone shows the settings; `--release-candidates on` also counts release candidates, `--auto-update on|off` decides whether `watch` flashes devices by itself (see below).
+The Devices page keeps looking for devices and shows each one as a card with its version, the target version and its state: up to date, update available, newer than the target version, custom build or not supported (below ExpressLRS 3.0). Devices found before that are not on the network right now are listed below the others with the time they were last seen; "Remove from list" removes one you no longer own (it is added again when it is found).
 
-`releases` asks GitHub for the ExpressLRS releases and shows the newest of each major version. `list` does that by itself when the last check is older than 6 hours, and keeps using the last list when GitHub cannot be reached.
+- **Update**: with auto update off, each device with an update gets its own "Update to …" button. A custom build gets a "Flash … anyway" button, with a note on what flashing it can reset.
+- **Names**: devices of the same kind share one name (the one the ELRS Lua script shows, e.g. RM RP4TD 2400). The pencil button gives a device its own name, e.g. "5 inch freestyle"; without one, the last 4 digits of its MAC tell them apart.
+- **Notices**: a device whose firmware did not match its target, or that failed 3 times, shows a notice. Check the device, then click "Allow again" (with auto update on it is flashed again right away). A single attempt that stopped or failed shows on the card until the next one.
 
-`list` listens for 10 seconds (change it with `--time <seconds>`) and shows every ELRS device on the network with its product, firmware version, state (up to date, update available, newer than the target version, custom build, not supported below 3.0), target, regulatory domain and address. It finds devices in two ways: their mDNS announcement, and by asking every address in the computer's networks (only the 254 addresses around its own in larger networks), so devices also show up where mDNS is blocked.
+After the upload the device restarts and counts as done once it shows up again with the new version. A receiver comes back by itself while its transmitter stays off. A transmitter module restarts with its WiFi off: turn it on again in the radio's ExpressLRS menu to confirm the update.
 
-A device is only on the network while its WiFi is on. Power it without its transmitter and wait about a minute (the "WiFi on interval", 60 seconds by default), or turn on WiFi in the ELRS Lua script on the radio. To join your home network instead of opening its own "ExpressLRS RX" network, the home network must be set up once in the device's web page.
+<!-- ![A device card with an update button and a device that is being flashed](docs/screenshots/device-update.png) -->
+> 📷 *Screenshot to follow: a device card with an update button and a device that is being flashed (`docs/screenshots/device-update.png`)*
 
-`list` remembers every device it finds. Devices found before that are not on the network right now are listed below the others with the time they were last seen.
+### 4. Auto update
 
-On macOS the app you run the command in needs permission for the local network: System Settings, Privacy & Security, Local Network, for example Terminal, iTerm or Visual Studio Code (its built-in terminal counts as Visual Studio Code). Quit and reopen the app after allowing it. Without the permission every address answers "no route to host", and `list` says so instead of "No ELRS devices found".
+The "Auto update" switch at the top of the sidebar decides whether devices are flashed by themselves:
 
-## Update a device
+- **On**: every device with an update is flashed as soon as it shows up, one at a time. A failed upload is tried again after about a minute, at most 3 times per version.
+- **Off** (the default): nothing is flashed by itself; each device with an update gets its own button.
 
-```sh
-npm run cli -- update 192.168.1.50 --dry-run
-npm run cli -- update 192.168.1.50
-```
+Custom builds, devices newer than the target version and devices without a target version are never flashed by auto update. Auto update only runs while the app is open. Closing the window quits the app; while a device is being flashed it asks first (a device cut off keeps its old firmware and gets the update next time).
 
-`update` flashes one device to the target version. Name it by its IP address, its MAC (as `list` shows it), its Lua name or its product name (in quotes); anything but an IP address is looked up on the network first (`--time <seconds>`, default 10). The firmware archive of the target version (about 30 MB, from the server the ExpressLRS Configurator uses) is downloaded once and kept; archives of versions that are no longer needed are removed.
+### 5. Activity
 
-Before anything is sent, `update` shows what it is going to do: the device, its version and the new one, which firmware file (FCC or LBT), the product and Lua name, where the hardware layout comes from, and the names of the options it carries over unchanged (binding, WiFi, regulatory domain and so on; their values are never shown). It also checks that the file is for the device's target. Start with `--dry-run`: it stops after this and sends nothing. Without it, `update` asks before flashing (`--yes` skips the question).
+The Activity page lists what happened since the start, grouped by minute. A flash takes one line with the old and the new version. Devices that did the same at once (all found at the start, or after a new target version) share one line that opens up.
 
-After the upload the device restarts. For a receiver, `update` waits up to 3 minutes for it to come back and checks its version. Keep the transmitter off meanwhile: the receiver's WiFi only comes back while it has no link. A transmitter module restarts with its WiFi off, so it is not waited for: turn its WiFi on again in the radio's ExpressLRS menu, and the update is confirmed once it shows up. A device that refuses the file because it is not for its target is never forced.
+<!-- ![The activity page](docs/screenshots/activity.png) -->
+> 📷 *Screenshot to follow: the Activity page (`docs/screenshots/activity.png`)*
 
-## Keep devices up to date
+### 6. Web Flasher
 
-```sh
-npm run cli -- settings --auto-update on
-npm run cli -- watch
-```
+The Web Flasher page shows the [ExpressLRS Web Flasher](https://expresslrs.github.io/web-flasher/) inside the app, for everything this app leaves out on purpose: any version including older ones, with your own binding phrase and WiFi details, flashed over a cable or saved as a file to upload over WiFi (for example a new receiver that does not know your home network yet). The safety rules of this app do not apply there, you choose every setting yourself. It needs internet. Once a device knows your home network, it shows up under Devices and is kept up to date over WiFi.
 
-`watch` keeps looking for devices until you stop it with Ctrl+C: it listens for mDNS all the time and scans the network every minute. With auto update on, every device with an update is flashed as soon as it shows up, one at a time in the order they got their update; with auto update off (the default), `watch` only shows what it finds. The switch can be changed with `settings` in a second terminal while `watch` runs. Pressing Ctrl+C while a device is being flashed waits for it to finish; press it again to quit right away.
+In the app:
 
-Custom builds, devices newer than the target version and devices without a target version are never flashed by `watch`. If an upload fails, `watch` tries again after a minute, at most 3 times per version. After the third failure, or when the firmware does not match the device's target, it leaves that device alone and shows a notice. Check the device, then let it be flashed again with:
+- Flashing over a cable works without Chrome or Edge: when the Web Flasher connects, the app asks which port the device is on.
+- Files the Web Flasher saves (firmware file, Lua script) go to the Downloads folder, which then opens with the file selected. Links to guides open in your browser.
+- Flashing STM32 devices with an ST-Link does not work in the app; use the [browser interface](docs/browser-interface.md) in Chrome or Edge for that.
+- The binding phrase and WiFi details you type in are deleted when the app quits, unless you turn on "Remember Web Flasher entries" in the settings (then they stay on the computer unencrypted, as in a browser).
 
-```sh
-npm run cli -- dismiss A1B2C3D4E5F6
-```
+<!-- ![The Web Flasher page](docs/screenshots/web-flasher.png) -->
+> 📷 *Screenshot to follow: the Web Flasher page (`docs/screenshots/web-flasher.png`)*
 
-`forget` removes a device from the list of known devices (for example one you no longer own); it is added again when it is found. `rename <device> "5 inch freestyle"` gives a device its own name (`""` removes it), which `list`, `watch` and the interface show next to its Lua name and the other commands accept. These take the device the same way as `update`, but only look in the list of known devices, not on the network.
+### 7. Settings
 
-`watch` and the interface do not wait for a device to come back: once the device has taken the upload, the next one is flashed. A device flashed this way, one that did not come back within 3 minutes after `update` (usually because its transmitter was switched on), and a transmitter module until its WiFi is turned on again, count as done once they show up again with the new version. Within the first 30 seconds after the upload, a sighting with the old version is ignored, since it may still stem from before the restart.
+- **Target version**: the major version all devices are kept on (see [step 1](#1-choose-the-target-version)).
+- **Release candidates**: also bring devices to release candidates, the test versions before a release. They can have bugs; devices are never downgraded when you turn this off again.
+- **Firmware archives**: the firmware of each version is downloaded once (about 30 MB) and kept on the computer; archives of versions no longer needed are removed. "Open folder" shows them.
+- **Remember Web Flasher entries**: see [Web Flasher](#6-web-flasher).
 
-Settings, the last list of releases, the known devices and the firmware archives are kept in `~/Library/Application Support/ELRS Auto Flash/` on macOS, `%LOCALAPPDATA%\ELRS Auto Flash\` on Windows and `~/.local/share/elrs-auto-flash/` on Linux.
+"Check for updates" at the bottom of the sidebar asks GitHub for new ExpressLRS releases right away; otherwise the app does this by itself every 6 hours. Appearance (light or dark) and language are chosen there as well.
 
-## Development
+## Your data on the computer
 
-- `npm run dev`: the interface with live reload (Vite, with the server in the same process)
-- `npm test`: tests (Vitest)
-- `npm run typecheck`: type check
-- `npm run lint`: Oxlint
-- `npm run desktop`: build and start the desktop app from the source
-- `npm run dist`: build the desktop app for this computer into `release/`
+Settings, the last list of releases, the known devices and the firmware archives are kept in:
 
-A pushed version tag (for example `git tag v0.1.0 && git push origin v0.1.0`, after raising the version in `package.json`) builds the app for macOS, Windows and Linux on GitHub Actions and attaches it to the release.
+- macOS: `~/Library/Application Support/ELRS Auto Flash/`
+- Windows: `%LOCALAPPDATA%\ELRS Auto Flash\`
+- Linux: `~/.local/share/elrs-auto-flash/` (or `$XDG_DATA_HOME`)
+
+## More documentation
+
+You do not need any of this to use the app. It is for those who want to go further:
+
+- [Browser interface](docs/browser-interface.md): the same pages as the desktop app, in your web browser
+- [Command line](docs/command-line.md): finding, updating and watching devices from the terminal
+- [Development](docs/development.md): running from source, building the app and making a release
 
 ## License
 
