@@ -1,0 +1,133 @@
+{
+  "name": "elrs-auto-flash",
+  "productName": "ELRS Auto Flash",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Find ExpressLRS receivers and transmitter modules on the home WiFi and keep their firmware up to date",
+  "author": "Mariator-pro",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/desktop/main.cjs",
+  "bin": {
+    "elrs-auto-flash": "src/cli/main.ts"
+  },
+  "engines": {
+    "node": ">=22.18"
+  },
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build && npm run build:desktop && node scripts/licenses.ts",
+    "build:desktop": "esbuild src/desktop/main.ts --bundle --platform=node --format=cjs --target=node22 --external:electron --outfile=dist/desktop/main.cjs --metafile=dist/desktop-meta.json",
+    "start": "node src/cli/main.ts ui",
+    "desktop": "npm run build && electron .",
+    "dist": "npm run build && electron-builder",
+    "cli": "node src/cli/main.ts",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p tsconfig.ui.json",
+    "lint": "oxlint"
+  },
+  "dependencies": {
+    "multicast-dns": "7.2.5",
+    "yauzl": "3.4.0"
+  },
+  "devDependencies": {
+    "@heroui/react": "3.2.6",
+    "@heroui/styles": "3.2.6",
+    "@tailwindcss/vite": "4.3.3",
+    "@types/multicast-dns": "7.2.4",
+    "@types/node": "26.6.5",
+    "@types/react": "19.3.0",
+    "@types/react-dom": "19.3.0",
+    "@types/yauzl": "3.4.0",
+    "@vitejs/plugin-react": "6.1.2",
+    "electron": "44.7.0",
+    "electron-builder": "26.17.0",
+    "electron-updater": "6.8.10",
+    "esbuild": "0.28.2",
+    "oxlint": "1.87.0",
+    "react": "19.3.0",
+    "react-dom": "19.3.0",
+    "tailwindcss": "4.3.3",
+    "typescript": "6.0.3",
+    "vite": "8.3.4",
+    "vitest": "5.0.3"
+  },
+  "build": {
+    "appId": "io.github.mariator-pro.elrs-auto-flash",
+    "files": [
+      "dist/ui/**",
+      "dist/desktop/**",
+      "package.json"
+    ],
+    "extraResources": [
+      {
+        "from": "dist/THIRD_PARTY_LICENSES.txt",
+        "to": "THIRD_PARTY_LICENSES.txt"
+      }
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "afterPack": "scripts/after-pack.ts",
+    "mac": {
+      "target": [
+        {
+          "target": "dmg",
+          "arch": [
+            "arm64",
+            "x64"
+          ]
+        }
+      ],
+      "identity": "-",
+      "hardenedRuntime": false,
+      "category": "public.app-category.utilities",
+      "extendInfo": {
+        "NSLocalNetworkUsageDescription": "ELRS Auto Flash looks for ExpressLRS receivers and transmitter modules on your network and updates their firmware.",
+        "NSBonjourServices": [
+          "_http._tcp"
+        ]
+      },
+      "artifactName": "elrs-auto-flash-macos-${arch}-v${version}.${ext}"
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        },
+        {
+          "target": "zip",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "elrs-auto-flash-win64-portable-v${version}.${ext}"
+    },
+    "linux": {
+      "target": [
+        {
+          "target": "AppImage",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "category": "Utility",
+      "artifactName": "elrs-auto-flash-linux-v${version}.${ext}"
+    },
+    "nsis": {
+      "artifactName": "elrs-auto-flash-win64-v${version}.${ext}",
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "Mariator-pro",
+      "repo": "elrs-auto-flash"
+    }
+  }
+}

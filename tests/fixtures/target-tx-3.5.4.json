@@ -1,0 +1,11 @@
+{
+  "target": "UNIFIED_ESP32_2400_TX",
+  "version": "3.5.4 (a6f9a2)",
+  "product_name": "RadioMaster Pocket Internal 2.4GHz TX",
+  "lua_name": "RM Pocket",
+  "reg_domain": "ISM2G4",
+  "git-commit": "a6f9a2",
+  "module-type": "TX",
+  "radio-type": "SX128X",
+  "has-sub-ghz": false
+}

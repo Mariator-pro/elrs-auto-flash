@@ -1,0 +1,39 @@
+{
+  "options": {
+    "uid": [1, 2, 3, 4, 5, 6],
+    "wifi-on-interval": 60,
+    "wifi-ssid": "HomeNet",
+    "wifi-password": "secret-wifi-password",
+    "rcvr-uart-baud": 420000,
+    "lock-on-first-connection": true,
+    "dji-permanently-armed": false,
+    "is-airport": false,
+    "domain": 0,
+    "customised": false,
+    "flash-discriminator": 123456789
+  },
+  "config": {
+    "serial-protocol": 0,
+    "sbus-failsafe": 0,
+    "modelid": 255,
+    "force-tlm": false,
+    "vbind": 0
+  },
+  "settings": {
+    "product_name": "RadioMaster RP1 2.4GHz RX",
+    "lua_name": "RM RP1",
+    "uidtype": "Flashed",
+    "ssid": "HomeNet",
+    "mode": "STA",
+    "wifi_dbm": -52,
+    "custom_hardware": false,
+    "target": "UNIFIED_ESP8285_2400_RX",
+    "version": "4.1.0",
+    "git-commit": "a9d4a9",
+    "module-type": "RX",
+    "radio-type": "SX128X",
+    "has_low_band": false,
+    "has_high_band": true,
+    "reg_domain_high": "CE_LBT"
+  }
+}

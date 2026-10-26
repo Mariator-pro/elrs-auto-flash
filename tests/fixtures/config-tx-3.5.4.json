@@ -1,0 +1,26 @@
+{
+  "options": {
+    "uid": [1, 2, 3, 4, 5, 6],
+    "wifi-on-interval": 60,
+    "wifi-ssid": "HomeNet",
+    "wifi-password": "secret-wifi-password",
+    "tlm-interval": 240,
+    "fan-runtime": 30,
+    "unlock-higher-power": false,
+    "airport-uart-baud": 460800,
+    "is-airport": false,
+    "domain": 0,
+    "customised": false,
+    "flash-discriminator": 123456789
+  },
+  "config": {
+    "uid": [1, 2, 3, 4, 5, 6],
+    "ssid": "HomeNet",
+    "mode": "STA",
+    "product_name": "RadioMaster Pocket Internal 2.4GHz TX",
+    "lua_name": "RM Pocket",
+    "reg_domain": "ISM2G4",
+    "has-highpower": false,
+    "uidtype": "Flashed"
+  }
+}
