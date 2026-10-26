@@ -35,6 +35,7 @@ export interface WatchDeps {
   scanEveryMs?: number; // how often the networks are scanned and the releases looked at
   offlineAfterMs?: number; // not seen for this long: off the network
   retryAfterMs?: number; // pause after a failed attempt or download
+  recheckAfterMs?: number; // a scan that looks blocked is repeated this soon before the hint shows
 }
 
 // Keeps looking for devices and, with auto update on, flashes those with an update one at a time,
@@ -46,6 +47,7 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
   const scanEveryMs = deps.scanEveryMs ?? 60_000;
   const offlineAfterMs = deps.offlineAfterMs ?? 120_000;
   const retryAfterMs = deps.retryAfterMs ?? 60_000;
+  const recheckAfterMs = deps.recheckAfterMs ?? 5000;
   const scan = deps.scan ?? (() => scanNetworks());
   const releasesNow = deps.releases ?? (() => currentReleases(p));
   const prepare = deps.prepare ?? ((ip, tag, onDownload, manual) => prepareFlash(p, ip, tag, manual, { onDownload }));
@@ -69,6 +71,7 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
   let started = false;
   let ticking = false;
   let again = false;
+  let blockedOnce = false; // the last scan looked blocked
 
   const problem = (kind: 'releases' | 'blocked' | 'download' | 'error', message?: Msg) => {
     if (problems.get(kind) === message?.message) return;
@@ -82,7 +85,17 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
     pending.push(...found.devices);
     onEvent({ kind: 'scanned', at: new Date(now()).toISOString() });
     refresh(); // take in what was found right away
-    problem('blocked', looksBlocked(found) ? { message: 'blocked' } : undefined);
+    if (!looksBlocked(found)) {
+      blockedOnce = false;
+      problem('blocked');
+    } else if (blockedOnce || problems.has('blocked')) {
+      problem('blocked', { message: 'blocked' });
+    } else {
+      // a single scan can be turned away for a moment although access is allowed (seen right after
+      // the start on macOS): the hint only shows when the next scan, soon, looks blocked as well
+      blockedOnce = true;
+      lastScan = now() - scanEveryMs + recheckAfterMs;
+    }
   }
 
   async function flash(d: KnownDevice, tag: string, settings: Settings, manual: boolean): Promise<void> {
@@ -247,6 +260,7 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
         pending.push(d);
         // an answer over mDNS means the network is open now (e.g. macOS just asked for the permission),
         // without waiting up to a minute for the next scan
+        blockedOnce = false;
         problem('blocked');
       });
       void loop();

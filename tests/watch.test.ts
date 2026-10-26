@@ -228,6 +228,8 @@ describe('watcher', () => {
     let announce: (d: Device) => void = () => {};
     const w = createWatcher(p, (e) => events.push(e), {
       scanEveryMs: 60_000,
+      tickMs: 10,
+      recheckAfterMs: 10,
       browse: (cb) => ((announce = cb), { stop() {} }),
       scan: async () => ({ devices: [], asked: 254, unreachable: 254 }),
       releases: async () => ({ list: { checked: '2026-10-25T12:00:00Z', releases: RELEASES } }),
@@ -239,5 +241,30 @@ describe('watcher', () => {
     announce(rx('A1'));
     expect(blocked()).toEqual([true, false]);
     await w.stop();
+  });
+
+  it('shows the hint on a blocked network only when the scan soon after looks blocked as well', async () => {
+    const p = paths(await tempDir());
+    await saveSettings(p, { autoUpdate: false, releaseCandidates: false, targetMajor: 4 });
+    const run = async (open: boolean[]) => {
+      const events: WatchEvent[] = [];
+      let scans = 0;
+      const w = createWatcher(p, (e) => events.push(e), {
+        scanEveryMs: 60_000,
+        tickMs: 10,
+        recheckAfterMs: 10,
+        browse: () => ({ stop() {} }),
+        scan: async () => ({ devices: [], asked: 254, unreachable: open[scans++] ?? true ? 0 : 254 }),
+        releases: async () => ({ list: { checked: '2026-10-25T12:00:00Z', releases: RELEASES } }),
+      });
+      w.start();
+      for (let i = 0; i < 100 && scans < open.length; i++) await new Promise((r) => setTimeout(r, 10));
+      await w.stop();
+      return { scans, blocked: events.filter((e) => e.kind === 'problem' && e.problem === 'blocked').map((e) => e.kind === 'problem' && !!e.message) };
+    };
+    // turned away right after the start, open on the second look: no hint
+    expect(await run([false, true])).toEqual({ scans: 2, blocked: [] });
+    // blocked twice: the hint shows
+    expect(await run([false, false])).toEqual({ scans: 2, blocked: [true] });
   });
 });
