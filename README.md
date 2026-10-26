@@ -4,10 +4,9 @@ Keep your ExpressLRS receivers and transmitter modules up to date without flashi
 
 Desktop app for macOS, Windows and Linux, in English and German (chosen at the bottom of the sidebar). For advanced use, a [browser interface](docs/browser-interface.md) and a [command line tool](docs/command-line.md) are available when running from source.
 
-<!-- ![The devices page with several receivers and a transmitter module](docs/screenshots/devices.png) -->
-> 📷 *Screenshot to follow: the Devices page with several receivers and a transmitter module (`docs/screenshots/devices.png`)*
+![The devices page with several receivers and a transmitter module](docs/screenshots/devices.png)
 
-**Work in progress:** finding devices, showing which ones have an update, flashing on request and auto update all work. Flashing builds the same file as the ExpressLRS tools and has been tested on a RadioMaster RP4TD (ESP32 receiver), a RadioMaster RP1 (ESP8285 receiver) and a transmitter module. There is no release yet; until then the app can be [built from source](docs/development.md).
+**Early version:** finding devices, showing which ones have an update, flashing on request and auto update all work. Flashing builds the same file as the ExpressLRS tools and has been tested on a RadioMaster RP4TD (ESP32 receiver), a RadioMaster RP1 (ESP8285 receiver) and a transmitter module.
 
 ## What it does
 
@@ -27,7 +26,7 @@ It is careful by design:
 
 ## Install
 
-From the first release on, download the app from the [Releases](https://github.com/Mariator-pro/elrs-auto-flash/releases) page:
+Download the app from the [Releases](https://github.com/Mariator-pro/elrs-auto-flash/releases) page:
 
 - **macOS**: `elrs-auto-flash-macos-arm64-v<version>.zip` for Apple Silicon (M1 and newer) or `elrs-auto-flash-macos-x64-v<version>.zip` for Intel Macs. Unzip it, open the `.dmg` inside and drag the app into Applications.
 - **Windows**: `elrs-auto-flash-win64-v<version>.zip`. Unzip it and run the installer inside.
@@ -59,8 +58,7 @@ On start the app looks for a newer release and shows it at the top left:
 
 On first start the Devices page asks you to choose a target version. Open "Settings" and pick the major version your transmitters run: transmitters and receivers need the same major version. Until then, nothing is flashed. When a newer major version comes out, the Devices page tells you; switch in the settings once your transmitters run it.
 
-<!-- ![The settings page with the target version](docs/screenshots/settings.png) -->
-> 📷 *Screenshot to follow: the Settings page with the target version (`docs/screenshots/settings.png`)*
+![The settings page with the target version](docs/screenshots/settings.png)
 
 ### 2. Bring your devices onto the network
 
@@ -81,8 +79,7 @@ The Devices page keeps looking for devices and shows each one as a card with its
 
 After the upload the device restarts and counts as done once it shows up again with the new version. A receiver comes back by itself while its transmitter stays off. A transmitter module restarts with its WiFi off: turn it on again in the radio's ExpressLRS menu to confirm the update.
 
-<!-- ![A device card with an update button and a device that is being flashed](docs/screenshots/device-update.png) -->
-> 📷 *Screenshot to follow: a device card with an update button and a device that is being flashed (`docs/screenshots/device-update.png`)*
+![A device card with an update button and a device that is being flashed](docs/screenshots/device-update.png)
 
 ### 4. Auto update
 
@@ -97,8 +94,7 @@ Custom builds, devices newer than the target version and devices without a targe
 
 The Activity page lists what happened since the start, grouped by minute. A flash takes one line with the old and the new version. Devices that did the same at once (all found at the start, or after a new target version) share one line that opens up.
 
-<!-- ![The activity page](docs/screenshots/activity.png) -->
-> 📷 *Screenshot to follow: the Activity page (`docs/screenshots/activity.png`)*
+![The activity page](docs/screenshots/activity.png)
 
 ### 6. Web Flasher
 
