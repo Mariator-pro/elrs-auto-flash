@@ -38,13 +38,21 @@ export async function loadKnown(p: Paths): Promise<KnownDevice[]> {
   return list.filter((d): d is KnownDevice => typeof d?.key === 'string' && typeof d?.ip === 'string' && typeof d?.lastSeen === 'string');
 }
 
+// The last update queued per file: within one process updates run one after the other, so none
+// reads the list while another one still writes it.
+const updating = new Map<string, Promise<unknown>>();
+
 // Reads the list, lets fn change it and writes it back right away, so changes made meanwhile by
 // another command (dismiss, forget) are not lost.
-export async function updateKnown<T>(p: Paths, fn: (list: KnownDevice[]) => T): Promise<{ list: KnownDevice[]; value: T }> {
-  const list = await loadKnown(p);
-  const value = fn(list);
-  await writeJson(p.devices, list);
-  return { list, value };
+export function updateKnown<T>(p: Paths, fn: (list: KnownDevice[]) => T): Promise<{ list: KnownDevice[]; value: T }> {
+  const run = (updating.get(p.devices) ?? Promise.resolve()).then(async () => {
+    const list = await loadKnown(p);
+    const value = fn(list);
+    await writeJson(p.devices, list);
+    return { list, value };
+  });
+  updating.set(p.devices, run.catch(() => {}));
+  return run;
 }
 
 const sameVersion = (version: string | undefined, tag: string) => {

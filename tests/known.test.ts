@@ -145,6 +145,13 @@ describe('devices.json', () => {
     expect(await loadKnown(p)).toEqual([]);
   });
 
+  it('runs updates at the same time one after the other, so none is lost', async () => {
+    const p = paths(await tempDir());
+    const macs = Array.from({ length: 20 }, (_, i) => `M${i}`);
+    await Promise.all(macs.map((mac, i) => updateKnown(p, (list) => void seen(list, dev({ mac, ip: `192.168.1.${i + 1}` }), at(0)))));
+    expect((await loadKnown(p)).map((d) => d.key).sort()).toEqual([...macs].sort());
+  });
+
   it('keeps an own name, cleaned up and cut short, and keeps it when the device is seen again', () => {
     const list: KnownDevice[] = [];
     const { device } = seen(list, dev({ mac: 'A1B2C3D4E5F6', device: 'RM RP4TD 2400' }), at(0));

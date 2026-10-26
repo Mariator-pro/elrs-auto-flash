@@ -42,9 +42,13 @@ export async function readJson<T>(path: string): Promise<T | undefined> {
   }
 }
 
-// Writes via a temporary file, so a crash never leaves half a file behind.
+let tmpCount = 0;
+
+// Writes via a temporary file, so a crash never leaves half a file behind. Each write has a file of
+// its own, so two writes at once (e.g. the interface and a command in a terminal) cannot mix theirs.
 export async function writeJson(path: string, value: unknown): Promise<void> {
   await mkdir(dirname(path), { recursive: true });
-  await writeFile(`${path}.tmp`, `${JSON.stringify(value, null, 2)}\n`);
-  await rename(`${path}.tmp`, path);
+  const tmp = `${path}.${process.pid}-${++tmpCount}.tmp`;
+  await writeFile(tmp, `${JSON.stringify(value, null, 2)}\n`);
+  await rename(tmp, path);
 }
