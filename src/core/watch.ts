@@ -2,7 +2,7 @@ import { archivesToKeep, pruneArchives } from './archive.ts';
 import { browseMdns, looksBlocked, scanNetworks, type Device, type Discovery } from './discovery.ts';
 import { AppError, toMsg, type ErrorKind, type Msg } from './errors.ts';
 import { prepareFlash, runFlash, type FlashPlan, type FlashResult } from './flash.ts';
-import { knownState, loadKnown, recordError, recordResult, seen, updateKnown, type KnownDevice, type KnownState } from './known.ts';
+import { knownState, loadKnownInTurn, recordError, recordResult, seen, updateKnown, type KnownDevice, type KnownState } from './known.ts';
 import type { Paths } from './paths.ts';
 import { currentReleases, targetRelease, type ReleaseList, type VersionedRelease } from './releases.ts';
 import { loadSettings, type Settings } from './settings.ts';
@@ -166,7 +166,7 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
     const later: { device: KnownDevice; to: string; result: FlashResult }[] = [];
     // written only when something was found, so changes from another command are rarely in the way
     const list = !found.length
-      ? await loadKnown(p)
+      ? await loadKnownInTurn(p)
       : (
           await updateKnown(p, (known) => {
             for (const d of found) {
