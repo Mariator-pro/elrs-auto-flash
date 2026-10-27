@@ -28,7 +28,7 @@ import { deviceState } from '../core/state.ts';
 import { compareVersions, MIN_MAJOR } from '../core/version.ts';
 import { createWatcher, type WatchEvent, type WatchState } from '../core/watch.ts';
 import { deviceLabel, MAX_NAME } from '../server/api.ts';
-import { noteServer, runningServer } from '../server/running.ts';
+import { noteFlasher, noteServer, runningFlasher, runningServer } from '../server/running.ts';
 import { startServer } from '../server/server.ts';
 
 const HELP = `Usage: elrs-auto-flash <command> [options]
@@ -260,6 +260,22 @@ Nothing was flashed. This is never forced.`,
 }
 
 async function update(p: Paths, name: string, opts: { seconds: number; dryRun: boolean; yes: boolean }): Promise<void> {
+  // a dry run sends nothing, so it may run next to anything
+  if (opts.dryRun) return updateOne(p, name, opts);
+  // the app, the browser interface or watch may be flashing this very device
+  const running = await runningServer(p.server);
+  if (running) throw new UserError(`ELRS Auto Flash already runs at ${running} and flashes devices; use its update button, or quit it before update.`);
+  const other = await runningFlasher(p.flasher);
+  if (other) throw new UserError(`${other.command} already runs in another terminal (process ${other.pid}) and flashes devices; wait for it or stop it before update.`);
+  const forget = await noteFlasher(p.flasher, 'update');
+  try {
+    await updateOne(p, name, opts);
+  } finally {
+    await forget();
+  }
+}
+
+async function updateOne(p: Paths, name: string, opts: { seconds: number; dryRun: boolean; yes: boolean }): Promise<void> {
   const s = await loadSettings(p);
   const { list: releases, error } = await currentReleases(p);
   if (error) console.log(`Could not check for releases: ${error.message}${releases ? ` (using the list from ${when(releases.checked)})` : ''}`);
@@ -435,6 +451,9 @@ async function ui(p: Paths): Promise<void> {
 async function watch(p: Paths): Promise<void> {
   const running = await runningServer(p.server);
   if (running) throw new UserError(`The browser interface already runs at ${running} and flashes devices; stop it before starting watch.`);
+  const other = await runningFlasher(p.flasher);
+  if (other) throw new UserError(`${other.command} already runs in another terminal (process ${other.pid}) and flashes devices; wait for it or stop it before starting watch.`);
+  const forget = await noteFlasher(p.flasher, 'watch');
   console.log('Watching for ELRS devices (mDNS, and a scan of the network every minute). Ctrl+C to stop.\n');
   const w = createWatcher(p, (e) => {
     if (e.kind === 'setup') watchTarget = e.target;
@@ -446,7 +465,7 @@ async function watch(p: Paths): Promise<void> {
     if (stopping) process.exit(130);
     stopping = true;
     if (w.flashing()) console.log('\nA device is being flashed: stopping once it is done. Press Ctrl+C again to quit right away.');
-    void w.stop().then(() => process.exit(0));
+    void w.stop().finally(() => void forget().finally(() => process.exit(0)));
   });
   w.start();
 }

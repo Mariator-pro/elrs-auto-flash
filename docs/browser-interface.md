@@ -12,7 +12,7 @@ npm start
 
 `npm start` opens the interface in the browser. The pages work as described in the [README](../README.md#using-it). Stop it with Ctrl+C in the terminal; a running flash is finished first.
 
-Starting it a second time opens the running interface instead of starting another one, and [`watch`](command-line.md#keep-devices-up-to-date) refuses to start while it runs, so two processes never flash the same device. The desktop app does not start while the browser interface runs (it asks you to quit that first), and `npm start` while the app runs opens the app's interface in the browser.
+Starting it a second time opens the running interface instead of starting another one, and [`watch`](command-line.md#keep-devices-up-to-date) and [`update`](command-line.md#update-a-device) refuse to start while it runs, so two processes never flash the same device. The desktop app does not start while the browser interface runs (it asks you to quit that first), and `npm start` while the app runs opens the app's interface in the browser.
 
 ## Web Flasher in the browser
 

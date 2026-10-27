@@ -9,6 +9,7 @@ export interface Paths {
   releases: string; // the last list of releases from GitHub
   devices: string; // every device ever found
   server: string; // address of the running server of the browser interface
+  flasher: string; // watch or update running in a terminal
   firmware: string; // one folder per version with its firmware archive
 }
 
@@ -27,6 +28,7 @@ export function paths(root = dataRoot()): Paths {
     releases: join(root, 'releases.json'),
     devices: join(root, 'devices.json'),
     server: join(root, 'server.json'),
+    flasher: join(root, 'flasher.json'),
     firmware: join(root, 'Firmware'),
   };
 }

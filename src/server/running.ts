@@ -45,3 +45,35 @@ export async function noteServer(file: string, url: string): Promise<() => Promi
     if ((await readNote(file))?.pid === process.pid) await rm(file, { force: true });
   };
 }
+
+// A command in a terminal that flashes (watch, or update while it runs) notes itself as well, so
+// watch and update in two terminals never flash at the same time. It has no address to ask, so the
+// process id alone tells whether it still runs.
+interface FlasherNote {
+  command: 'watch' | 'update';
+  pid: number;
+}
+
+async function readFlasherNote(file: string): Promise<FlasherNote | undefined> {
+  try {
+    const note = JSON.parse(await readFile(file, 'utf8')) as Partial<FlasherNote>;
+    return (note.command === 'watch' || note.command === 'update') && typeof note.pid === 'number' ? (note as FlasherNote) : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+// The command of another process that still runs; a note left by one that was killed is ignored.
+export async function runningFlasher(file: string): Promise<FlasherNote | undefined> {
+  const note = await readFlasherNote(file);
+  return note && note.pid !== process.pid && alive(note.pid) ? note : undefined;
+}
+
+// Notes this process; the returned function removes the note again, unless another one wrote it since.
+export async function noteFlasher(file: string, command: FlasherNote['command']): Promise<() => Promise<void>> {
+  await mkdir(dirname(file), { recursive: true });
+  await writeFile(file, `${JSON.stringify({ command, pid: process.pid } satisfies FlasherNote)}\n`);
+  return async () => {
+    if ((await readFlasherNote(file))?.pid === process.pid) await rm(file, { force: true });
+  };
+}
