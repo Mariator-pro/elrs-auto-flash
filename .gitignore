@@ -22,6 +22,9 @@ CLAUDE.md
 # Folder
 context/
 
+# Local tools
+scripts/screenshots.ts
+
 # Node
 node_modules/
 dist/

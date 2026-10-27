@@ -107,8 +107,7 @@ In the app:
 - Flashing STM32 devices with an ST-Link does not work in the app; use the [browser interface](docs/browser-interface.md) in Chrome or Edge for that.
 - The binding phrase and WiFi details you type in are deleted when the app quits, unless you turn on "Remember Web Flasher entries" in the settings (then they stay on the computer unencrypted, as in a browser).
 
-<!-- ![The Web Flasher page](docs/screenshots/web-flasher.png) -->
-> 📷 *Screenshot to follow: the Web Flasher page (`docs/screenshots/web-flasher.png`)*
+![The Web Flasher page](docs/screenshots/web-flasher.png)
 
 ### 7. Settings
 
