@@ -1,4 +1,5 @@
 import { mkdir, writeFile } from 'node:fs/promises';
+import { request } from 'node:http';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Device } from '../src/core/discovery.ts';
@@ -101,9 +102,11 @@ describe('server', () => {
   it('flashes a device on its button, logs it, and refuses devices that cannot be flashed', async () => {
     const { api, until, flashed } = await server([rx('0A', '4.0.1'), rx('0B', '4.1.0')]);
     await until((x) => x.devices.length === 2);
-    expect((await api('POST', '/api/devices/update', { key: '0B' })).data).toMatchObject({ code: 'notFlashable' });
-    expect((await api('POST', '/api/devices/update', { key: 'nope' })).status).toBe(404);
-    expect((await api('POST', '/api/devices/update', { key: '0A' })).status).toBe(200);
+    expect((await api('POST', '/api/devices/update', { key: '0B', state: 'current' })).data).toMatchObject({ code: 'notFlashable' });
+    expect((await api('POST', '/api/devices/update', { key: 'nope', state: 'update' })).status).toBe(404);
+    // the button of an own build on a device that shows an update now
+    expect((await api('POST', '/api/devices/update', { key: '0A', state: 'custom-build' })).data).toMatchObject({ code: 'notFlashable' });
+    expect((await api('POST', '/api/devices/update', { key: '0A', state: 'update' })).status).toBe(200);
     await until((x) => x.devices.find((d) => d.key === '0A')?.state === 'current');
     expect(flashed).toEqual(['192.168.1.10']);
     const { data: activity } = await api<ActivityEntry[]>('GET', '/api/activity');
@@ -118,10 +121,10 @@ describe('server', () => {
   it('shows a stopped attempt on the device until the next one', async () => {
     const { api, until } = await server([rx('0A', '4.0.1')], { gone: new Set(['192.168.1.10']) });
     await until((x) => x.devices.length === 1);
-    await api('POST', '/api/devices/update', { key: '0A' });
+    await api('POST', '/api/devices/update', { key: '0A', state: 'update' });
     const st = await until((x) => x.devices[0]?.lastAttempt !== undefined && x.devices[0].state === 'update');
     expect(st.devices[0]!.lastAttempt).toEqual({ to: '4.1.0', outcome: { result: 'stopped', message: 'No ELRS device answers at 192.168.1.10.', kind: 'gone' } });
-    await api('POST', '/api/devices/update', { key: '0A' });
+    await api('POST', '/api/devices/update', { key: '0A', state: 'update' });
     expect((await until((x) => x.devices[0]?.state === 'current')).devices[0]!.lastAttempt).toBeUndefined();
   });
 
@@ -212,5 +215,33 @@ describe('server', () => {
     expect(html).toContain(`content="${s.token}"`);
     expect(html).toContain('&quot;lang&quot;:&quot;de&quot;');
     expect((await fetch(`${s.url}/../../etc/passwd`)).status).not.toBe(500);
+  });
+
+  it('answers only under its own name, so another site pointed at this computer cannot read the key', async () => {
+    const dir = await tempDir();
+    await writeFile(join(dir, 'index.html'), '<html><head></head><body></body></html>');
+    const { s } = await server([], { staticDir: dir });
+    const port = new URL(s.url).port;
+    // fetch keeps the Host header to itself, node:http sends the one given
+    const get = (path: string, host: string) =>
+      new Promise<{ status: number; body: string }>((resolve, reject) => {
+        const req = request({ host: '127.0.0.1', port, path, headers: { host, [TOKEN_HEADER]: s.token } }, (res) => {
+          let body = '';
+          res.on('data', (c: Buffer) => (body += c));
+          res.on('end', () => resolve({ status: res.statusCode ?? 0, body }));
+        });
+        req.on('error', reject);
+        req.end();
+      });
+    for (const host of [`localhost:${port}`, `127.0.0.1:${port}`, 'localhost:5173']) {
+      expect((await get('/', host)).status).toBe(200);
+      expect((await get('/api/activity', host)).status).toBe(200);
+    }
+    for (const host of [`evil.example:${port}`, `127.0.0.1.evil.example:${port}`, 'evil.example']) {
+      const page = await get('/', host);
+      expect(page.status).toBe(403);
+      expect(page.body).not.toContain(s.token);
+      expect((await get('/api/activity', host)).status).toBe(403);
+    }
   });
 });

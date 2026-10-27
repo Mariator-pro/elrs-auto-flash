@@ -197,6 +197,12 @@ const en = {
     ok: 'OK',
     alreadyRunning: 'ELRS Auto Flash already runs in the browser',
     alreadyRunningText: 'Quit it there first (Ctrl+C in the terminal where npm start runs), then open the app again.',
+    alreadyWatching: 'ELRS Auto Flash already runs in the terminal',
+    alreadyWatchingText: 'watch flashes devices there. Stop it first (Ctrl+C in its terminal), then open the app again.',
+    alreadyUpdating: 'A device is being flashed in the terminal',
+    alreadyUpdatingText: 'Wait until update is done there, then open the app again.',
+    alreadyApp: 'ELRS Auto Flash already runs',
+    alreadyAppText: 'Another copy of the app is open. Quit it first, then open this one again.',
   },
 };
 

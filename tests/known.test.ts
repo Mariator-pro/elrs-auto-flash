@@ -2,6 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { describe, expect, it } from 'vitest';
 import type { Device } from '../src/core/discovery.ts';
 import { AppError } from '../src/core/errors.ts';
+import { STALE_MS } from '../src/core/flash.ts';
 import {
   dismiss,
   findKnown,
@@ -12,7 +13,6 @@ import {
   recordResult,
   rename,
   seen,
-  STALE_MS,
   updateKnown,
   type KnownDevice,
 } from '../src/core/known.ts';

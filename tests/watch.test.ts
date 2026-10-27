@@ -22,7 +22,8 @@ const rx = (mac: string, version = '4.0.1', more: Partial<Device> = {}): Device 
 
 // A watcher on a clock that only moves when told, with the network, releases and flashing faked:
 // `found` is what every scan sees, `results` what the next flashes end with (default done). A device
-// flashed with "done" reports the new version from then on, one with "unconfirmed" is gone.
+// flashed with "done" reports the new version from then on, one with "unconfirmed" is gone. `during`
+// runs once while the next upload is going on.
 async function watcher(settings: Partial<Settings> = {}) {
   const p = paths(await tempDir());
   await saveSettings(p, { autoUpdate: true, releaseCandidates: false, targetMajor: 4, ...settings });
@@ -33,6 +34,7 @@ async function watcher(settings: Partial<Settings> = {}) {
     results: [] as (FlashResult | AppError)[],
     flashed: [] as string[],
     events: [] as WatchEvent[],
+    during: undefined as (() => Promise<void>) | undefined,
     // two ticks, each scanning, taking in what was found and starting a flash when one is due
     async round(minutes = 0) {
       t += minutes * 60_000;
@@ -58,6 +60,9 @@ async function watcher(settings: Partial<Settings> = {}) {
     },
     run: async (plan, onStep) => {
       onStep('upload');
+      const during = s.during;
+      s.during = undefined;
+      await during?.();
       onStep('reboot');
       const r = (s.results.shift() as FlashResult | undefined) ?? { result: 'done', version: '4.1.0' };
       if (r.result === 'done') s.found = s.found.map((d) => (d.ip === plan.ip ? { ...d, version: r.version } : d));
@@ -184,15 +189,59 @@ describe('watcher', () => {
     const s = await watcher({ autoUpdate: false });
     s.found = [rx('A1'), rx('B1', 'master'), rx('B3', '4.1.0')];
     await s.round();
-    s.w.request('B1');
-    s.w.request('B3');
+    s.w.request('B1', 'custom-build');
+    s.w.request('B3', 'update');
     await s.round();
     expect(s.flashed).toEqual(['192.168.1.177 4.1.0 by hand']);
-    s.w.request('A1');
+    s.w.request('A1', 'update');
     await s.round();
-    expect(s.flashed).toEqual(['192.168.1.177 4.1.0 by hand', '192.168.1.161 4.1.0 by hand']);
+    expect(s.flashed).toEqual(['192.168.1.177 4.1.0 by hand', '192.168.1.161 4.1.0']);
     await s.round(1);
     expect(s.flashed).toHaveLength(2);
+  });
+
+  it('drops a click on "Update" when the device turns into an own build before its turn, and the other way round', async () => {
+    const s = await watcher({ autoUpdate: false });
+    s.found = [rx('C1'), rx('A1'), rx('B1', 'master')];
+    await s.round();
+    s.w.request('C1', 'update');
+    s.w.request('A1', 'update');
+    s.w.request('B1', 'custom-build');
+    // while C1 is flashed, A1 gets an own build and B1 a release
+    s.during = async () => {
+      s.found = [rx('C1'), rx('A1', 'master'), rx('B1', '4.0.1')];
+      await s.w.tick();
+      await new Promise((r) => setTimeout(r, 0));
+      await s.w.tick();
+    };
+    await s.round();
+    await s.round(1);
+    expect(s.flashed).toEqual([`${rx('C1').ip} 4.1.0`]);
+    expect(s.states('A1')).toEqual(['update', 'queued', 'custom-build']);
+    expect(s.states('B1')).toEqual(['custom-build', 'queued', 'update']);
+  });
+
+  it('keeps a flash and the queue together when a device found by its IP address shows its MAC meanwhile', async () => {
+    const s = await watcher();
+    const ip = rx('A1').ip;
+    s.found = [rx('A1', '4.0.1', { mac: undefined, via: ['scan'] }), rx('A2')];
+    s.results = [{ result: 'unconfirmed' }];
+    s.during = async () => {
+      // mDNS reports its MAC: the next rounds take it in and move it from its IP address to the MAC
+      s.found = [rx('A1'), rx('A2')];
+      await s.w.tick();
+      await new Promise((r) => setTimeout(r, 0));
+      await s.w.tick();
+    };
+    await s.round();
+    await s.round();
+    expect(s.flashed).toEqual([`${ip} 4.1.0`, '192.168.1.162 4.1.0']);
+    expect(s.outcomes()).toEqual(['A1 unconfirmed', 'A2 done']);
+    expect(s.states('A1')).toEqual(['flashing', 'unconfirmed']);
+    const a1 = (await loadKnown(s.p)).find((d) => d.key === 'A1');
+    expect(a1?.unconfirmed?.tag).toBe('4.1.0');
+    const steps = s.events.flatMap((e) => (e.kind === 'step' ? [`${e.device.key} ${e.step}`] : []));
+    expect(steps).toEqual([`${ip} prepare`, `${ip} upload`, 'A1 reboot', 'A2 prepare', 'A2 upload', 'A2 reboot']);
   });
 
   it('reports a forgotten device as removed', async () => {

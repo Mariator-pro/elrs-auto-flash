@@ -82,11 +82,15 @@ export type FlashResult =
   | { result: 'mismatch'; message: string } // the device refused the file for its target
   | { result: 'failed'; message: string; code?: MsgCode; params?: MsgParams }; // upload error or connection lost
 
+// Right after the upload a device may still answer with its old version, from before its restart.
+export const STALE_MS = 30_000;
+
 export interface RunDeps {
   fetchFn?: FetchFn;
   onStep?: (step: 'upload' | 'reboot') => void;
   waitMs?: number; // how long to wait for the device after the upload (default 3 minutes)
   pollMs?: number;
+  staleMs?: number; // an old version within this time of the upload is asked again (default STALE_MS)
   wait?: boolean; // false: done after the upload, the device is confirmed once it is seen again
 }
 
@@ -107,17 +111,21 @@ export async function runFlash(plan: FlashPlan, deps: RunDeps = {}): Promise<Fla
   deps.onStep?.('reboot');
   const waitMs = deps.waitMs ?? 180_000;
   const pollMs = deps.pollMs ?? 5000;
+  const staleMs = deps.staleMs ?? STALE_MS;
   const target = parseVersion(plan.to)!;
-  const until = Date.now() + waitMs;
+  const uploaded = Date.now();
+  const until = uploaded + waitMs;
+  let old: string | undefined;
   await new Promise((r) => setTimeout(r, Math.min(pollMs * 2, waitMs)));
   while (Date.now() < until) {
     const info = await readConfig(plan.ip, fetchFn, 3000);
     if (info) {
       const v = parseVersion(info.version);
       if (v && compareVersions(v, target) === 0) return { result: 'done', version: info.version };
-      return { result: 'wrong-version', version: info.version };
+      if (Date.now() - uploaded >= staleMs) return { result: 'wrong-version', version: info.version };
+      old = info.version;
     }
     await new Promise((r) => setTimeout(r, pollMs));
   }
-  return { result: 'unconfirmed' };
+  return old ? { result: 'wrong-version', version: old } : { result: 'unconfirmed' };
 }

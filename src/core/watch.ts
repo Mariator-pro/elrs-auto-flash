@@ -9,6 +9,9 @@ import { loadSettings, type Settings } from './settings.ts';
 
 export type WatchState = KnownState | 'queued' | 'flashing';
 
+// The two buttons of a card: an update, or an own build flashed anyway.
+export type ByHand = 'update' | 'custom-build';
+
 export type FlashOutcome = FlashResult | (Msg & { result: 'stopped'; kind?: ErrorKind });
 
 export type WatchEvent =
@@ -57,7 +60,7 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
   const shown = new Map<string, { state: WatchState; online: boolean }>();
   const queue: string[] = [];
   const retryAt = new Map<string, number>();
-  const requested = new Set<string>();
+  const requested = new Map<string, ByHand>(); // the button clicked, which holds only while the device still shows it
   const problems = new Map<string, string>(); // the text of each problem now
   let releases: ReleaseList | undefined;
   let lastScan = -Infinity;
@@ -98,8 +101,10 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
     }
   }
 
-  async function flash(d: KnownDevice, tag: string, settings: Settings, manual: boolean): Promise<void> {
-    const step = (s: 'prepare' | 'download' | 'upload' | 'reboot', percent?: number) => onEvent({ kind: 'step', device: d, step: s, percent });
+  // `job.key` follows the device should it move to its MAC meanwhile (see rekey).
+  async function flash(d: KnownDevice, job: { key: string }, tag: string, settings: Settings, manual: boolean): Promise<void> {
+    const device = () => ({ ...d, key: job.key });
+    const step = (s: 'prepare' | 'download' | 'upload' | 'reboot', percent?: number) => onEvent({ kind: 'step', device: device(), step: s, percent });
     let outcome: FlashOutcome;
     try {
       step('prepare');
@@ -119,10 +124,10 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
       outcome = await run(plan, (s) => step(s));
       const r = outcome;
       await updateKnown(p, (list) => {
-        const rec = list.find((k) => k.key === d.key);
+        const rec = list.find((k) => k.key === job.key);
         if (rec) recordResult(rec, tag, r, new Date(now()));
       });
-      if (r.result === 'failed' || r.result === 'wrong-version') retryAt.set(d.key, now() + retryAfterMs);
+      if (r.result === 'failed' || r.result === 'wrong-version') retryAt.set(job.key, now() + retryAfterMs);
     } catch (e) {
       const err = e instanceof AppError ? e : undefined;
       outcome = { result: 'stopped', ...toMsg(e), ...(err?.kind && { kind: err.kind }) };
@@ -131,14 +136,39 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
         problem('download', toMsg(err));
       } else if (err?.kind === 'unsupported' || err?.kind === 'target') {
         await updateKnown(p, (list) => {
-          const rec = list.find((k) => k.key === d.key);
+          const rec = list.find((k) => k.key === job.key);
           if (rec) recordError(rec, tag, err, new Date(now()));
         });
       } else {
-        retryAt.set(d.key, now() + retryAfterMs);
+        retryAt.set(job.key, now() + retryAfterMs);
       }
     }
-    onEvent({ kind: 'result', device: d, to: tag, outcome });
+    onEvent({ kind: 'result', device: device(), to: tag, outcome });
+  }
+
+  // A device known by its IP address goes by its MAC once mDNS reports it, here or in another command:
+  // its place in the queue, a click, a pause and a running flash move along.
+  function rekey(list: KnownDevice[], keys: Set<string>): void {
+    const old = new Set([...queue, ...requested.keys(), ...retryAt.keys(), ...(flashing ? [flashing.key] : [])]);
+    for (const from of old) {
+      if (keys.has(from)) continue;
+      const to = list.find((d) => d.ip === from && d.key === d.mac)?.key;
+      if (!to) continue;
+      const at = queue.indexOf(from);
+      if (at >= 0 && queue.includes(to)) queue.splice(at, 1);
+      else if (at >= 0) queue[at] = to;
+      const click = requested.get(from);
+      if (click) {
+        requested.delete(from);
+        requested.set(to, click);
+      }
+      const pause = retryAt.get(from);
+      if (pause !== undefined) {
+        retryAt.delete(from);
+        retryAt.set(to, pause);
+      }
+      if (flashing?.key === from) flashing.key = to;
+    }
   }
 
   async function tick(): Promise<void> {
@@ -178,6 +208,7 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
     for (const l of later) onEvent({ kind: 'result', device: l.device, to: l.to, outcome: l.result, later: true });
 
     const keys = new Set(list.map((d) => d.key));
+    rekey(list, keys);
     for (const key of [...shown.keys()]) {
       if (keys.has(key)) continue;
       shown.delete(key);
@@ -190,7 +221,7 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
       const online = t - Date.parse(d.lastSeen) < offlineAfterMs;
       let state: WatchState = knownState(d, target);
       // by hand: an update, or an own build (its button is the one way to flash it)
-      const byHand = requested.has(d.key) && (state === 'update' || state === 'custom-build');
+      const byHand = requested.get(d.key) === state;
       if (requested.has(d.key) && (!byHand || !online) && flashing?.key !== d.key) requested.delete(d.key);
       const auto = state === 'update' && settings.autoUpdate && (retryAt.get(d.key) ?? 0) <= t;
       const wanted = online && !!target && (auto || byHand);
@@ -208,18 +239,17 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
 
     if (!flashing && !stopped && target && t >= pausedUntil && queue[0]) {
       const d = list.find((k) => k.key === queue[0])!;
-      const key = d.key;
-      shown.set(key, { state: 'flashing', online: true });
+      shown.set(d.key, { state: 'flashing', online: true });
       onEvent({ kind: 'device', device: d, state: 'flashing', online: true, before: { state: 'queued', online: true } });
-      flashing = {
-        key,
-        done: flash(d, target.tag, settings, requested.has(key)).finally(() => {
-          queue.splice(queue.indexOf(key), 1);
-          requested.delete(key);
-          flashing = undefined;
-          refresh();
-        }),
-      };
+      const job = { key: d.key, done: Promise.resolve() };
+      flashing = job;
+      job.done = flash(d, job, target.tag, settings, requested.get(d.key) === 'custom-build').finally(() => {
+        const at = queue.indexOf(job.key);
+        if (at >= 0) queue.splice(at, 1);
+        requested.delete(job.key);
+        flashing = undefined;
+        refresh();
+      });
     }
   }
 
@@ -249,9 +279,10 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
   return {
     tick,
     refresh,
-    // Flashes this device as soon as it is its turn, also with auto update off or as an own build.
-    request(key: string): void {
-      requested.add(key);
+    // Flashes this device as soon as it is its turn, also with auto update off or as an own build;
+    // the click is dropped should the device no longer show that button by then.
+    request(key: string, button: ByHand): void {
+      requested.set(key, button);
       refresh();
     },
     start(): void {

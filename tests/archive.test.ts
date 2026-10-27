@@ -1,4 +1,4 @@
-import { mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readdir, readFile, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { archivePath, archivesToKeep, ensureArchive, findProduct, firmwareFor, pruneArchives } from '../src/core/archive.ts';
@@ -10,12 +10,13 @@ import { fixture, tempDir, TARGETS, testArchive } from './helpers.ts';
 const COMMIT = 'a9d4a9cb5b5687c4c9d7e9e7fbdf44ad93651da6';
 
 // The ExpressLRS download server: index.json and one firmware.zip; length cuts the zip short.
-function server(zip: Buffer, length = zip.length): { fetchFn: FetchFn; urls: string[] } {
+// `body` replaces what is sent, `announced` the size the server gives for it.
+function server(zip: Buffer, length = zip.length, body?: Buffer, announced = zip.length): { fetchFn: FetchFn; urls: string[] } {
   const urls: string[] = [];
   const fetchFn = (async (url: string) => {
     urls.push(url);
     if (url.endsWith('/index.json')) return new Response(JSON.stringify({ tags: { '4.1.0': COMMIT } }));
-    if (url.endsWith(`/${COMMIT}/firmware.zip`)) return new Response(zip.subarray(0, length), { headers: { 'content-length': String(zip.length) } });
+    if (url.endsWith(`/${COMMIT}/firmware.zip`)) return new Response(body ?? zip.subarray(0, length), { headers: { 'content-length': String(announced) } });
     return new Response('', { status: 404 });
   }) as unknown as FetchFn;
   return { fetchFn, urls };
@@ -88,12 +89,34 @@ describe('ensureArchive', () => {
     const zip = testArchive();
     await expect(ensureArchive(p, '9.9.9', server(zip).fetchFn)).rejects.toThrow('has no firmware for 9.9.9');
     await expect(ensureArchive(p, '../4.1.0', server(zip).fetchFn)).rejects.toThrow('Not a version');
-    await expect(ensureArchive(p, '4.1.0', server(zip, 100).fetchFn)).rejects.toThrow('broke off');
+    await expect(ensureArchive(p, '4.1.0', server(zip, 100).fetchFn)).rejects.toThrow('incomplete or damaged');
+    expect(await readdir(join(p.firmware, '4.1.0'))).toEqual([]);
+    // another answer than the archive, of the announced size all the same
+    await expect(ensureArchive(p, '4.1.0', server(zip, zip.length, Buffer.alloc(zip.length, '<html>')).fetchFn)).rejects.toThrow('incomplete or damaged');
     expect(await readdir(join(p.firmware, '4.1.0'))).toEqual([]);
     const offline = (async () => {
       throw new TypeError('fetch failed');
     }) as unknown as FetchFn;
     await expect(ensureArchive(p, '4.1.0', offline)).rejects.toThrow('No connection to the ExpressLRS download server');
+  });
+
+  it('takes an archive that came packed, whose size differs from the announced one', async () => {
+    const p = paths(await tempDir());
+    const zip = testArchive();
+    // fetch unpacks such a download on the way: more bytes arrive than the server announced
+    const packed = server(zip, zip.length, zip, zip.length - 100);
+    expect(await readFile(await ensureArchive(p, '4.1.0', packed.fetchFn))).toEqual(zip);
+  });
+
+  it('downloads into a file of its own, so another download of the same version cannot mix in', async () => {
+    const p = paths(await tempDir());
+    const zip = testArchive();
+    const other = join(p.firmware, '4.1.0', 'firmware.zip.99999.part');
+    await mkdir(join(p.firmware, '4.1.0'), { recursive: true });
+    await writeFile(other, 'half of another download');
+    const path = await ensureArchive(p, '4.1.0', server(zip).fetchFn);
+    expect(await readFile(path)).toEqual(zip);
+    expect(await readFile(other, 'utf8')).toBe('half of another download');
   });
 });
 
@@ -112,5 +135,18 @@ describe('archivesToKeep and pruneArchives', () => {
     expect(await pruneArchives(p, ['4.1.0', '3.6.4'])).toEqual(['4.0.1']);
     expect((await readdir(p.firmware)).sort()).toEqual(['3.6.4', '4.1.0', 'notes']);
     expect(await pruneArchives(paths(await tempDir()), [])).toEqual([]);
+  });
+
+  it('leaves a folder that cannot be deleted for next time, without stopping', async () => {
+    const p = paths(await tempDir());
+    for (const name of ['4.0.1', '4.1.0']) await mkdir(join(p.firmware, name, 'x'), { recursive: true });
+    // a folder in use, e.g. open on Windows: here one whose files cannot be removed
+    await chmod(join(p.firmware, '4.0.1'), 0o555);
+    try {
+      expect(await pruneArchives(p, ['4.1.0'])).toEqual([]);
+    } finally {
+      await chmod(join(p.firmware, '4.0.1'), 0o755);
+    }
+    expect(await pruneArchives(p, ['4.1.0'])).toEqual(['4.0.1']);
   });
 });

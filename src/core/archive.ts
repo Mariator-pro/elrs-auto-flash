@@ -43,6 +43,8 @@ export async function commitOf(tag: string, fetchFn: FetchFn = fetch): Promise<s
   return commit;
 }
 
+const TARGETS_NAME = 'firmware/hardware/targets.json';
+
 // The archive of one version, downloaded first when it is not there yet; returns its path.
 export async function ensureArchive(
   p: Paths,
@@ -65,13 +67,16 @@ export async function ensureArchive(
     done += chunk.length;
     onProgress?.(done, total);
   });
-  const part = `${path}.part`;
+  // a file of its own per process, so two downloads at once never write into each other
+  const part = `${path}.${process.pid}.part`;
   try {
     await pipeline(counted, createWriteStream(part));
-    if (total && done !== total) throw new AppError(msg('downloadBroken', { tag, done, total }), 'download');
-  } catch (e) {
+    // complete only once it opens as the archive a flash reads: a download cut short or another answer
+    // fails here, not at every flash after; its size says little (fetch unpacks a packed download)
+    if (!(await readZipEntries(part, (n) => n === TARGETS_NAME)).has(TARGETS_NAME)) throw new Error('no targets.json');
+  } catch {
     await rm(part, { force: true });
-    throw e instanceof AppError ? e : new AppError(`Download of ${tag} broke off.`, 'download');
+    throw new AppError(msg('downloadBroken', { tag }), 'download');
   }
   await rename(part, path);
   await writeJson(join(folderOf(p, tag), 'archive.json'), { tag, commit, size: done, downloaded: new Date().toISOString() });
@@ -94,8 +99,14 @@ export function archivesToKeep(releases: Release[], s: Settings): string[] {
 // Deletes the archives of all other versions; returns the versions removed.
 export async function pruneArchives(p: Paths, keep: string[]): Promise<string[]> {
   const names = await readdir(p.firmware).catch(() => [] as string[]);
-  const gone = names.filter((n) => SAFE_TAG.test(n) && !keep.includes(n));
-  for (const n of gone) await rm(folderOf(p, n), { recursive: true, force: true });
+  const gone: string[] = [];
+  for (const n of names.filter((n) => SAFE_TAG.test(n) && !keep.includes(n))) {
+    // a folder in use (e.g. open on Windows) stays for next time: tidying up never stops a flash
+    await rm(folderOf(p, n), { recursive: true, force: true }).then(
+      () => gone.push(n),
+      () => {},
+    );
+  }
   return gone;
 }
 
@@ -141,8 +152,7 @@ export function findProduct(targets: unknown, target: string, productName: strin
 // Reads what a flash of this device needs from the archive: the firmware for its target and domain
 // (CE_LBT from LBT/, everything else from FCC/), its product entry, layout and logo.
 export async function firmwareFor(zipPath: string, device: { target: string; product: string; domainHigh?: string }): Promise<FirmwareFiles> {
-  const targetsName = 'firmware/hardware/targets.json';
-  const targetsFile = (await readZipEntries(zipPath, (n) => n === targetsName)).get(targetsName);
+  const targetsFile = (await readZipEntries(zipPath, (n) => n === TARGETS_NAME)).get(TARGETS_NAME);
   if (!targetsFile) throw new AppError(msg('archiveNoTargets'), 'download');
   const product = findProduct(JSON.parse(targetsFile.toString('utf8')), device.target, device.product);
   if (!product) throw new AppError(msg('noProduct', { product: device.product, target: device.target }), 'unsupported');

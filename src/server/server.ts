@@ -72,6 +72,18 @@ const TYPES: Record<string, string> = {
 const MAX_BODY = 64 * 1024;
 const MAX_ACTIVITY = 500;
 
+// The names this computer's browser reaches the server by, on any port (Vite forwards from its own).
+const LOCAL_NAMES = ['localhost', '127.0.0.1'];
+
+// The name in a Host header, without the port; empty when there is none or it cannot be read.
+function hostName(host: string | undefined): string {
+  try {
+    return host ? new URL(`http://${host}`).hostname : '';
+  } catch {
+    return '';
+  }
+}
+
 // An activity line before it gets its number and time (Omit for each kind of line).
 type NewEntry<T = ActivityEntry> = T extends unknown ? Omit<T, 'id' | 'at'> : never;
 
@@ -320,12 +332,14 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
     },
 
     'POST /api/devices/update': async (req) => {
-      const d = device((await body<{ key: string }>(req)).key);
+      // the state the card showed, so a click lands only on the button that was seen
+      const { key, state } = await body<{ key: string; state: WatchState }>(req);
+      const d = device(key);
       if (!target) throw new HttpError(400, 'noTarget', 'No target version set.');
-      if (!d.online || (d.state !== 'update' && d.state !== 'custom-build')) {
+      if (!d.online || d.state !== state || (state !== 'update' && state !== 'custom-build')) {
         throw new HttpError(400, 'notFlashable', 'This device cannot be flashed now.');
       }
-      watcher.request(d.key);
+      watcher.request(d.key, state);
     },
 
     'POST /api/devices/dismiss': async (req) => {
@@ -393,6 +407,9 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
     try {
+      // only under its own name: another site whose name was pointed at this computer (DNS rebinding)
+      // would count as the same site to the browser and could read the key from the page
+      if (!LOCAL_NAMES.includes(hostName(req.headers.host))) throw new HttpError(403, 'invalidRequest', 'Wrong host.');
       if (url.pathname.startsWith('/api/') && (req.headers[TOKEN_HEADER] ?? url.searchParams.get('token')) !== token) {
         throw new HttpError(403, 'invalidRequest', 'Wrong key.');
       }

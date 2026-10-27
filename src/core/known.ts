@@ -1,7 +1,7 @@
 import type { DeviceType } from './device.ts';
 import type { Device } from './discovery.ts';
 import { msg, toMsg, type AppError, type Msg } from './errors.ts';
-import type { FlashResult } from './flash.ts';
+import { STALE_MS, type FlashResult } from './flash.ts';
 import { readJson, writeJson, type Paths } from './paths.ts';
 import type { VersionedRelease } from './releases.ts';
 import { deviceState, type DeviceState } from './state.ts';
@@ -77,8 +77,6 @@ function addFailure(d: KnownDevice, tag: string, m: Msg, now: Date): void {
 }
 
 const FIELDS = ['type', 'target', 'product', 'device', 'version', 'domainHigh', 'domainLow'] as const;
-
-export const STALE_MS = 30_000;
 
 // Takes in a device just found. It is recognized by its MAC, else by its IP address as long as the
 // product does not differ; a device known only by its IP address is taken over once its MAC shows up

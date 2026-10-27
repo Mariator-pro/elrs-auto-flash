@@ -3,7 +3,7 @@ import { extname, join } from 'node:path';
 import { app, BrowserWindow, dialog, screen, session, shell, type SerialPort } from 'electron';
 import { paths } from '../core/paths.ts';
 import { loadSettings } from '../core/settings.ts';
-import { runningServer, noteServer } from '../server/running.ts';
+import { noteRunning, running } from '../server/running.ts';
 import { startServer, type RunningServer } from '../server/server.ts';
 import { TEXTS, type Lang, type Texts } from '../ui/texts.ts';
 import { appUpdates } from './update.ts';
@@ -136,19 +136,26 @@ async function start(): Promise<void> {
   await forgetWebFlasher();
   allowSerial();
   saveDownloads();
-  // The browser interface may run already: two servers would flash the same devices, and showing its page
-  // here would hide what only the app has, so the app asks to quit it first.
-  if (await runningServer(p.server)) {
+  // The browser interface, watch or update may run already: two of them would flash the same devices, and
+  // showing the browser interface's page here would hide what only the app has, so the app asks to quit it first.
+  const other = await running(p.server);
+  if (other) {
     const t = await texts();
-    await dialog.showMessageBox({ type: 'info', message: t.alreadyRunning, detail: t.alreadyRunningText, buttons: [t.ok] });
+    const [message, detail] = {
+      browser: [t.alreadyRunning, t.alreadyRunningText],
+      watch: [t.alreadyWatching, t.alreadyWatchingText],
+      update: [t.alreadyUpdating, t.alreadyUpdatingText],
+      app: [t.alreadyApp, t.alreadyAppText],
+    }[other.kind];
+    await dialog.showMessageBox({ type: 'info', message, detail, buttons: [t.ok] });
     app.quit();
     return;
   }
   // only the installed app updates itself, not a start from the source folder
   const updates = app.isPackaged ? appUpdates() : undefined;
   server = await startServer({ paths: p, port: 0, appUpdates: updates, desktop: true, staticDir: join(app.getAppPath(), 'dist', 'ui') });
-  // the browser interface and the terminal's watch find this server through the note
-  forgetNote = await noteServer(p.server, server.url);
+  // the browser interface and the terminal's watch and update find this server through the note
+  forgetNote = await noteRunning(p.server, { kind: 'app', url: server.url });
   openWindow(server.url);
   // without internet or GitHub the app runs on as it is
   updates?.check().catch((e: unknown) => console.error('Update check failed:', e));

@@ -36,7 +36,7 @@ export function DevicesPage({ state, run, onSettings }: { state: StateView; run:
       d={d}
       target={state.target}
       autoUpdate={state.settings.autoUpdate}
-      onUpdate={() => act('/api/devices/update', d.key)}
+      onUpdate={() => run(() => post('/api/devices/update', { key: d.key, state: d.state }))}
       onDismiss={() => act('/api/devices/dismiss', d.key)}
       onForget={() => act('/api/devices/forget', d.key)}
       onRename={(name) => run(() => post('/api/devices/rename', { key: d.key, name }))}

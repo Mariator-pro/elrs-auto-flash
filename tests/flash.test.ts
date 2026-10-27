@@ -31,7 +31,7 @@ type Answer = 'ok' | 'mismatch' | 'error';
 
 // A receiver on the network: answers /config, /options.json and /hardware.json, takes an upload and
 // afterwards reports `after` as its version, or nothing at all when `after` is undefined.
-async function receiver(opts: { version?: string; product?: string; target?: string; domain?: string; custom?: boolean; answer?: Answer; after?: string }) {
+async function receiver(opts: { version?: string; product?: string; target?: string; domain?: string; custom?: boolean; answer?: Answer; after?: string; restartMs?: number }) {
   const uploads: Upload[] = [];
   const asked: string[] = [];
   let version = opts.version ?? '4.0.1';
@@ -63,8 +63,11 @@ async function receiver(opts: { version?: string; product?: string; target?: str
       const answer = opts.answer ?? 'ok';
       res.end(JSON.stringify({ status: answer, msg: answer === 'mismatch' ? '<b>Current target:</b> X.<br>Uploaded image: Y.' : 'Done' }));
       if (answer === 'ok') {
-        if (opts.after === undefined) gone = true;
-        else version = opts.after;
+        const after = opts.after;
+        if (after === undefined) gone = true;
+        // a restart that takes a while: the old version answers until then
+        else if (opts.restartMs) setTimeout(() => (version = after), opts.restartMs);
+        else version = after;
       }
     } else {
       res.statusCode = 404;
@@ -222,6 +225,16 @@ describe('runFlash', () => {
     const steps: string[] = [];
     expect(await runFlash(plan, { ...quick, wait: false, onStep: (s) => steps.push(s) })).toEqual({ result: 'unconfirmed', check: 'later' });
     expect(steps).toEqual(['upload']);
+  });
+
+  it('takes the old version right after the upload for one from before the restart, and asks again', async () => {
+    const slow = await receiver({ after: '4.1.0', restartMs: 150 });
+    expect(await runFlash(await planFor(slow), { waitMs: 2000, pollMs: 20, staleMs: 400 })).toEqual({ result: 'done', version: '4.1.0' });
+    // still the old version once that time is over: no need to wait for the rest
+    const old = await receiver({ after: '4.0.1' });
+    const start = Date.now();
+    expect(await runFlash(await planFor(old), { waitMs: 5000, pollMs: 20, staleMs: 100 })).toEqual({ result: 'wrong-version', version: '4.0.1' });
+    expect(Date.now() - start).toBeLessThan(2000);
   });
 
   it('tells a device still on the old version, one not seen again, a mismatch and an error apart', async () => {
