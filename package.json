@@ -2,7 +2,7 @@
   "name": "elrs-auto-flash",
   "productName": "ELRS Auto Flash",
   "private": true,
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Find ExpressLRS receivers and transmitter modules on the home WiFi and keep their firmware up to date",
   "author": "Mariator-pro",
   "license": "MIT",
