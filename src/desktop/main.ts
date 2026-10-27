@@ -6,6 +6,7 @@ import { loadSettings } from '../core/settings.ts';
 import { noteRunning, running } from '../server/running.ts';
 import { startServer, type RunningServer } from '../server/server.ts';
 import { TEXTS, type Lang, type Texts } from '../ui/texts.ts';
+import { isWebLink } from './links.ts';
 import { appUpdates } from './update.ts';
 
 // Space kept free around the window when it opens, in points.
@@ -111,15 +112,15 @@ function openWindow(url: string): BrowserWindow {
   // Electron's default menu has nothing the app needs on Windows, and Windows draws a stray white line under it in dark mode;
   // macOS keeps it for Cmd+Q and copy and paste
   if (process.platform !== 'darwin') win.removeMenu();
-  // links to GitHub, and the Web Flasher's guides, open in the browser, not in the app
+  // links to GitHub, and the Web Flasher's guides, open in the browser, not in the app; other schemes not at all
   win.webContents.setWindowOpenHandler(({ url: to }) => {
-    void shell.openExternal(to);
+    if (isWebLink(to)) void shell.openExternal(to);
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (e, to) => {
     if (to.startsWith(url)) return;
     e.preventDefault();
-    void shell.openExternal(to);
+    if (isWebLink(to)) void shell.openExternal(to);
   });
   // closing the window quits the app, the same way as Cmd+Q
   win.on('close', (e) => {
