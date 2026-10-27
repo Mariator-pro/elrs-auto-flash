@@ -13,6 +13,7 @@ import { createWatcher, type WatchDeps, type WatchEvent } from '../core/watch.ts
 import {
   deviceLabel,
   MAX_NAME,
+  TOKEN_HASH,
   TOKEN_HEADER,
   withPageData,
   type ActivityEntry,
@@ -44,7 +45,8 @@ export interface AppUpdates {
 export interface RunningServer {
   url: string;
   token: string;
-  page: (html: string) => string; // the page with this start's key and the stored choices
+  open: string; // the address to open the interface at, with the key behind # (never sent to the server)
+  page: (html: string) => string; // the page with this start's key and the stored choices, for Vite in development only
   flashing: () => boolean;
   close: () => Promise<void>; // resolves once a running flash has ended
 }
@@ -70,6 +72,29 @@ const TYPES: Record<string, string> = {
 };
 
 const MAX_BODY = 64 * 1024;
+
+// The page loads only its own files and the Web Flasher's frame, and no other site may show it in a frame
+// of its own (where it could be clicked unseen); the Web Flasher is also asked once whether it answers.
+const WEB_FLASHER = 'https://expresslrs.github.io';
+const CSP = [
+  "default-src 'self'",
+  "script-src 'self'",
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data:",
+  "font-src 'self' data:",
+  `connect-src 'self' ${WEB_FLASHER}`,
+  `frame-src ${WEB_FLASHER}`,
+  "frame-ancestors 'none'",
+  "base-uri 'none'",
+  "form-action 'none'",
+  "object-src 'none'",
+].join('; ');
+const SECURITY_HEADERS = {
+  'Content-Security-Policy': CSP,
+  'X-Frame-Options': 'DENY',
+  'X-Content-Type-Options': 'nosniff',
+  'Referrer-Policy': 'no-referrer',
+};
 const MAX_ACTIVITY = 500;
 
 // The names this computer's browser reaches the server by, on any port (Vite forwards from its own).
@@ -387,7 +412,7 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
     },
   };
 
-  const page = (html: string) => withPageData(html, token, settings.ui ?? {});
+  const page = (html: string) => withPageData(html, settings.ui ?? {}, token);
 
   const serveStatic = async (res: ServerResponse, urlPath: string) => {
     const root = o.staticDir!;
@@ -399,13 +424,15 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
       res.end(await readFile(file));
       return;
     }
-    // never cached: an old page would carry the key of an earlier start
+    // without the key, which comes behind # in the address: any program on this computer, also one of
+    // another user, can fetch the page; never cached, it carries the stored choices
     res.writeHead(200, { 'Content-Type': TYPES['.html'], 'Cache-Control': 'no-store' });
-    res.end(page(await readFile(file, 'utf8')));
+    res.end(withPageData(await readFile(file, 'utf8'), settings.ui ?? {}));
   };
 
   const server = createServer(async (req, res) => {
     const url = new URL(req.url ?? '/', 'http://localhost');
+    for (const [name, value] of Object.entries(SECURITY_HEADERS)) res.setHeader(name, value);
     try {
       // only under its own name: another site whose name was pointed at this computer (DNS rebinding)
       // would count as the same site to the browser and could read the key from the page
@@ -438,9 +465,11 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
   });
   watcher.start();
   const address = server.address();
+  const url = `http://localhost:${typeof address === 'object' && address ? address.port : o.port}`;
   return {
-    url: `http://localhost:${typeof address === 'object' && address ? address.port : o.port}`,
+    url,
     token,
+    open: `${url}/#${TOKEN_HASH}=${token}`,
     page,
     flashing: watcher.flashing,
     close: async () => {

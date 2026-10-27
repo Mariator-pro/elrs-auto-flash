@@ -1,9 +1,23 @@
 import { useEffect, useState } from 'react';
-import { TOKEN_HEADER, TOKEN_META, type ActivityEntry, type ErrorCode, type StateView } from '../server/api.ts';
+import { TOKEN_HASH, TOKEN_HEADER, TOKEN_META, type ActivityEntry, type ErrorCode, type StateView } from '../server/api.ts';
 import type { Texts } from './texts.ts';
 
-// The server's key for this start, which it put into the page.
-const token = () => document.querySelector<HTMLMetaElement>(`meta[name="${TOKEN_META}"]`)?.content ?? '';
+// The server's key for this start: behind # in the address the page was opened at, kept for this tab
+// (a reload has no # any more) and taken out of the address bar; under Vite in development in the page.
+function readToken(): string {
+  const fromPage = document.querySelector<HTMLMetaElement>(`meta[name="${TOKEN_META}"]`)?.content;
+  if (fromPage) return fromPage;
+  const fromAddress = new URLSearchParams(location.hash.slice(1)).get(TOKEN_HASH);
+  try {
+    if (fromAddress) sessionStorage.setItem(TOKEN_HASH, fromAddress);
+    else return sessionStorage.getItem(TOKEN_HASH) ?? '';
+  } catch {
+    // no storage: only this load has the key
+  }
+  if (fromAddress) history.replaceState(null, '', location.pathname + location.search);
+  return fromAddress ?? '';
+}
+const token = readToken();
 
 export class ApiError extends Error {
   code?: ErrorCode;
@@ -24,15 +38,17 @@ async function answer<T>(res: Response): Promise<T> {
 }
 
 export async function get<T>(path: string): Promise<T> {
-  return answer<T>(await fetch(path, { headers: { [TOKEN_HEADER]: token() } }));
+  return answer<T>(await fetch(path, { headers: { [TOKEN_HEADER]: token } }));
 }
 
 export async function post<T = void>(path: string, body: unknown = {}): Promise<T> {
-  return answer<T>(await fetch(path, { method: 'POST', headers: { [TOKEN_HEADER]: token(), 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
+  return answer<T>(await fetch(path, { method: 'POST', headers: { [TOKEN_HEADER]: token, 'Content-Type': 'application/json' }, body: JSON.stringify(body) }));
 }
 
 // A server started anew has a new key and turns this page away: load it again, at most every 10 s.
+// Opened without the key (an address copied without the part behind #), a reload brings none either.
 function reloadPage(): void {
+  if (!token) return;
   try {
     if (Date.now() - Number(sessionStorage.getItem('reloadedAt') ?? 0) < 10_000) return;
     sessionStorage.setItem('reloadedAt', String(Date.now()));
@@ -54,7 +70,7 @@ export function useServer(): { state?: StateView; activity: ActivityEntry[]; con
         const ids = new Set(now.map((a) => a.id));
         return [...now, ...more.filter((a) => !ids.has(a.id))].sort((a, b) => b.id - a.id).slice(0, 500);
       });
-    const es = new EventSource(`/api/events?token=${encodeURIComponent(token())}`);
+    const es = new EventSource(`/api/events?token=${encodeURIComponent(token)}`);
     es.addEventListener('state', (e) => setState(JSON.parse((e as MessageEvent).data) as StateView));
     es.addEventListener('activity', (e) => merge([JSON.parse((e as MessageEvent).data) as ActivityEntry]));
     es.onopen = () => {

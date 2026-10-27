@@ -103,7 +103,7 @@ The Web Flasher page shows the [ExpressLRS Web Flasher](https://expresslrs.githu
 In the app:
 
 - Flashing over a cable works without Chrome or Edge: when the Web Flasher connects, the app asks which port the device is on.
-- Files the Web Flasher saves (firmware file, Lua script) go to the Downloads folder, which then opens with the file selected. Links to guides open in your browser.
+- Files the Web Flasher saves (firmware file, Lua script) go to the Downloads folder, which then opens with the file selected; any other file is saved only where you choose. Links to guides open in your browser.
 - Flashing STM32 devices with an ST-Link does not work in the app; use the [browser interface](docs/browser-interface.md) in Chrome or Edge for that.
 - The binding phrase and WiFi details you type in are deleted when the app quits, unless you turn on "Remember Web Flasher entries" in the settings (then they stay on the computer unencrypted, as in a browser).
 

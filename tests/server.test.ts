@@ -204,7 +204,7 @@ describe('server', () => {
     expect(installs).toBe(2);
   });
 
-  it('serves the page with this start’s key and the stored choices', async () => {
+  it('serves the page with the stored choices but without the key, which comes behind # in the address', async () => {
     const dir = await tempDir();
     await mkdir(join(dir, 'assets'));
     await writeFile(join(dir, 'index.html'), '<html><head></head><body></body></html>');
@@ -212,9 +212,28 @@ describe('server', () => {
     const res = await fetch(`${s.url}/devices`);
     expect(res.headers.get('cache-control')).toBe('no-store');
     const html = await res.text();
-    expect(html).toContain(`content="${s.token}"`);
+    expect(html).not.toContain(s.token);
     expect(html).toContain('&quot;lang&quot;:&quot;de&quot;');
+    expect(s.open).toBe(`${s.url}/#token=${s.token}`);
+    // under Vite in development the key is put into the page
+    expect(s.page('<head></head>')).toContain(`content="${s.token}"`);
     expect((await fetch(`${s.url}/../../etc/passwd`)).status).not.toBe(500);
+  });
+
+  it('keeps other sites from showing the page in a frame and limits what the page loads', async () => {
+    const dir = await tempDir();
+    await writeFile(join(dir, 'index.html'), '<html><head></head><body></body></html>');
+    const { s } = await server([], { staticDir: dir });
+    for (const path of ['/', '/api/state', '/api/nothing']) {
+      const res = await fetch(`${s.url}${path}`, { headers: { [TOKEN_HEADER]: s.token } });
+      expect(res.headers.get('x-frame-options')).toBe('DENY');
+      expect(res.headers.get('x-content-type-options')).toBe('nosniff');
+      expect(res.headers.get('referrer-policy')).toBe('no-referrer');
+      const csp = res.headers.get('content-security-policy');
+      expect(csp).toContain("frame-ancestors 'none'");
+      expect(csp).toContain("script-src 'self';");
+      expect(csp).toContain('frame-src https://expresslrs.github.io;');
+    }
   });
 
   it('answers only under its own name, so another site pointed at this computer cannot read the key', async () => {

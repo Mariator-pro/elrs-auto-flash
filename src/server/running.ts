@@ -1,8 +1,8 @@
-import { mkdir, readFile, rm, writeFile } from 'node:fs/promises';
+import { chmod, mkdir, readFile, rm, writeFile } from 'node:fs/promises';
 import { dirname } from 'node:path';
 
 // Whatever flashes devices notes itself here: the desktop app, the browser interface (both with the
-// address of their server), the terminal's watch and update. Only one of them runs at a time, so two
+// address their interface opens at, with the key), the terminal's watch and update. Only one of them runs at a time, so two
 // never flash the same device or download the same firmware.
 
 export type Runner = { kind: 'app' | 'browser'; url: string } | { kind: 'watch' | 'update' };
@@ -46,9 +46,12 @@ export async function running(file: string): Promise<(Runner & { pid: number }) 
 }
 
 // Notes this process; the returned function removes the note again, unless another one wrote it since.
+// The address of a server carries its key, so only this user may read the note.
 export async function noteRunning(file: string, runner: Runner): Promise<() => Promise<void>> {
   await mkdir(dirname(file), { recursive: true });
-  await writeFile(file, `${JSON.stringify({ ...runner, pid: process.pid } satisfies Note)}\n`);
+  await writeFile(file, `${JSON.stringify({ ...runner, pid: process.pid } satisfies Note)}\n`, { mode: 0o600 });
+  // a note left from before keeps its own mode
+  await chmod(file, 0o600);
   return async () => {
     if ((await readNote(file))?.pid === process.pid) await rm(file, { force: true });
   };

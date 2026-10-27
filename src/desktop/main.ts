@@ -1,12 +1,12 @@
 import { existsSync } from 'node:fs';
-import { extname, join } from 'node:path';
+import { basename, extname, join } from 'node:path';
 import { app, BrowserWindow, dialog, screen, session, shell, type SerialPort } from 'electron';
 import { paths } from '../core/paths.ts';
 import { loadSettings } from '../core/settings.ts';
 import { noteRunning, running } from '../server/running.ts';
 import { startServer, type RunningServer } from '../server/server.ts';
 import { TEXTS, type Lang, type Texts } from '../ui/texts.ts';
-import { isWebLink } from './links.ts';
+import { isOwnPage, isWebLink } from './links.ts';
 import { appUpdates } from './update.ts';
 
 // Space kept free around the window when it opens, in points.
@@ -66,12 +66,16 @@ async function choosePort(win: BrowserWindow, ports: SerialPort[]): Promise<stri
 }
 
 // Downloads of the Web Flasher (firmware file, Lua script) go to the Downloads folder without asking,
-// under a free name, and are shown there once saved.
+// under a free name, and are shown there once saved. Any other file is only saved where the user picks
+// in the system's dialog, so no page in the window can put programs or documents there unseen.
+const AUTO_SAVE = ['.bin', '.gz', '.lua'];
+
 function saveDownloads(): void {
   session.defaultSession.on('will-download', (_e, item) => {
-    const dir = app.getPath('downloads');
-    const name = item.getFilename();
+    const name = basename(item.getFilename());
     const ext = extname(name);
+    if (!AUTO_SAVE.includes(ext.toLowerCase())) return;
+    const dir = app.getPath('downloads');
     let file = join(dir, name);
     for (let n = 1; existsSync(file); n++) file = join(dir, `${name.slice(0, name.length - ext.length)} (${n})${ext}`);
     item.setSavePath(file);
@@ -81,11 +85,17 @@ function saveDownloads(): void {
   });
 }
 
-function allowSerial(): void {
+// No page in the window gets a permission (camera, microphone, location, notifications ...) apart from
+// writing to the clipboard, and the Web Flasher the serial ports.
+const ALLOWED = ['clipboard-sanitized-write'];
+
+function limitPermissions(): void {
   const ses = session.defaultSession;
   // Electron hands the origin over as a URL, e.g. with a slash at the end
   const isFlasher = (origin: string) => URL.parse(origin)?.origin === WEB_FLASHER;
-  ses.setPermissionCheckHandler((_wc, permission, origin) => permission !== 'serial' || isFlasher(origin));
+  const allowed = (permission: string, origin: string) => ALLOWED.includes(permission) || (permission === 'serial' && isFlasher(origin));
+  ses.setPermissionCheckHandler((_wc, permission, origin) => allowed(permission, origin));
+  ses.setPermissionRequestHandler((_wc, permission, callback, details) => callback(allowed(permission, details.requestingUrl)));
   ses.setDevicePermissionHandler((d) => d.deviceType === 'serial' && isFlasher(d.origin));
   ses.on('select-serial-port', (e, ports, wc, callback) => {
     e.preventDefault();
@@ -95,7 +105,8 @@ function allowSerial(): void {
   });
 }
 
-function openWindow(url: string): BrowserWindow {
+// url: the server's own address; open: the address the window opens at, with the key
+function openWindow(url: string, open: string): BrowserWindow {
   // At most 1280 × 860, but always inside the free screen area (no menu bar, dock or taskbar) with a margin, centred there.
   const area = screen.getDisplayNearestPoint(screen.getCursorScreenPoint()).workArea;
   const width = Math.min(1280, area.width - 2 * WINDOW_MARGIN);
@@ -118,7 +129,7 @@ function openWindow(url: string): BrowserWindow {
     return { action: 'deny' };
   });
   win.webContents.on('will-navigate', (e, to) => {
-    if (to.startsWith(url)) return;
+    if (isOwnPage(to, url)) return;
     e.preventDefault();
     if (isWebLink(to)) void shell.openExternal(to);
   });
@@ -128,14 +139,14 @@ function openWindow(url: string): BrowserWindow {
     e.preventDefault();
     app.quit();
   });
-  void win.loadURL(url);
+  void win.loadURL(open);
   return win;
 }
 
 async function start(): Promise<void> {
   // left over when the app did not quit normally last time
   await forgetWebFlasher();
-  allowSerial();
+  limitPermissions();
   saveDownloads();
   // The browser interface, watch or update may run already: two of them would flash the same devices, and
   // showing the browser interface's page here would hide what only the app has, so the app asks to quit it first.
@@ -156,8 +167,8 @@ async function start(): Promise<void> {
   const updates = app.isPackaged ? appUpdates() : undefined;
   server = await startServer({ paths: p, port: 0, appUpdates: updates, desktop: true, staticDir: join(app.getAppPath(), 'dist', 'ui') });
   // the browser interface and the terminal's watch and update find this server through the note
-  forgetNote = await noteRunning(p.server, { kind: 'app', url: server.url });
-  openWindow(server.url);
+  forgetNote = await noteRunning(p.server, { kind: 'app', url: server.open });
+  openWindow(server.url, server.open);
   // without internet or GitHub the app runs on as it is
   updates?.check().catch((e: unknown) => console.error('Update check failed:', e));
 }

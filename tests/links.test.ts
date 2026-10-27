@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { isWebLink } from '../src/desktop/links.ts';
+import { isOwnPage, isWebLink } from '../src/desktop/links.ts';
 
 describe('isWebLink', () => {
   it('lets web pages open in the browser', () => {
@@ -22,6 +22,30 @@ describe('isWebLink', () => {
       'not a url',
     ]) {
       expect(isWebLink(url)).toBe(false);
+    }
+  });
+});
+
+describe('isOwnPage', () => {
+  const own = 'http://localhost:51234';
+
+  it('stays on the own page', () => {
+    for (const url of ['http://localhost:51234/', 'http://localhost:51234/#token=abc', 'http://localhost:51234/activity?x=1']) {
+      expect(isOwnPage(url, own)).toBe(true);
+    }
+  });
+
+  it('leaves for other sites, even those that start like the own page', () => {
+    for (const url of [
+      'http://localhost:51234@evil.example/',
+      'http://localhost:5123/',
+      'http://127.0.0.1:51234/',
+      'https://localhost:51234/',
+      'https://expresslrs.github.io/web-flasher/',
+      'file:///etc/passwd',
+      'not a url',
+    ]) {
+      expect(isOwnPage(url, own)).toBe(false);
     }
   });
 });

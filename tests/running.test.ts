@@ -1,4 +1,4 @@
-import { readFile, writeFile } from 'node:fs/promises';
+import { readFile, stat, writeFile } from 'node:fs/promises';
 import { join } from 'node:path';
 import { describe, expect, it } from 'vitest';
 import { noteRunning, running } from '../src/server/running.ts';
@@ -49,5 +49,12 @@ describe('running', () => {
     await writeFile(file, JSON.stringify({ kind: 'watch', pid: OTHER }));
     await again();
     expect(JSON.parse(await readFile(file, 'utf8'))).toEqual({ kind: 'watch', pid: OTHER });
+  });
+
+  it.skipIf(process.platform === 'win32')('lets only this user read the note, which carries the key in the address', async () => {
+    const file = join(await tempDir(), 'server.json');
+    await writeFile(file, '{}', { mode: 0o644 });
+    await noteRunning(file, { kind: 'app', url: 'http://localhost:1/#token=secret' });
+    expect((await stat(file)).mode & 0o777).toBe(0o600);
   });
 });
