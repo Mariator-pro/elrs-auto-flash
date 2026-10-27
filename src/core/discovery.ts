@@ -1,5 +1,6 @@
 import makeMdns from 'multicast-dns';
-import { readConfig, type DeviceInfo, type DeviceType } from './device.ts';
+import { isIPv4 } from 'node:net';
+import { printable, readConfig, type DeviceInfo, type DeviceType } from './device.ts';
 import { ipv4Networks, type Ipv4Network } from '../platform/network.ts';
 
 export type Via = 'mdns' | 'scan';
@@ -34,14 +35,37 @@ function txtValues(data: unknown): Record<string, string> {
   for (const p of parts) {
     const s = Buffer.isBuffer(p) ? p.toString('utf8') : typeof p === 'string' ? p : '';
     const eq = s.indexOf('=');
-    if (eq > 0) out[s.slice(0, eq)] = s.slice(eq + 1);
+    if (eq > 0) out[s.slice(0, eq)] = printable(s.slice(eq + 1));
   }
   return out;
 }
 
+const toInt = (ip: string) => ip.split('.').reduce((n, part) => n * 256 + Number(part), 0);
+const toIp = (n: number) => [24, 16, 8, 0].map((s) => Math.floor(n / 2 ** s) % 256).join('.');
+
+const PRIVATE = [
+  { address: '10.0.0.0', netmask: '255.0.0.0' },
+  { address: '172.16.0.0', netmask: '255.240.0.0' },
+  { address: '192.168.0.0', netmask: '255.255.0.0' },
+];
+
+const inNetwork = (ip: string, n: Ipv4Network) => {
+  const mask = toInt(n.netmask);
+  return (toInt(ip) & mask) >>> 0 === (toInt(n.address) & mask) >>> 0;
+};
+
+// Whether an address announced over mDNS may be asked: one in a private network or in one of the
+// computer's own networks, but not the computer itself. Whoever answers mDNS could otherwise have the
+// program send requests to this computer's own services or to the internet.
+export function isDeviceAddress(ip: string, networks: Ipv4Network[]): boolean {
+  if (!isIPv4(ip) || networks.some((n) => n.address === ip)) return false;
+  return [...PRIVATE, ...networks].some((n) => inNetwork(ip, n));
+}
+
 // ELRS devices in one mDNS response: each announces _http._tcp as "<hostname>_<MAC>" with vendor=elrs.
-// The address comes from the A record of the service's host, else from the sender.
-export function parseMdnsResponse(packet: MdnsPacket, from: string): Device[] {
+// The address comes from the A record of the service's host, else from the sender; a device without
+// an address that may be asked (see isDeviceAddress) is left out.
+export function parseMdnsResponse(packet: MdnsPacket, from: string, networks: Ipv4Network[] = ipv4Networks()): Device[] {
   const records = [...(packet.answers ?? []), ...(packet.additionals ?? [])];
   const devices: Device[] = [];
   for (const r of records) {
@@ -52,8 +76,10 @@ export function parseMdnsResponse(packet: MdnsPacket, from: string): Device[] {
     const srv = records.find((x) => x.type === 'SRV' && x.name === r.name)?.data as { target?: string } | undefined;
     const a = srv?.target ? records.find((x) => x.type === 'A' && x.name === srv.target) : undefined;
     const type: DeviceType | undefined = txt.type === 'rx' || txt.type === 'tx' ? txt.type : undefined;
+    const ip = [a?.data, from].find((x): x is string => typeof x === 'string' && isDeviceAddress(x, networks));
+    if (!ip) continue;
     devices.push({
-      ip: typeof a?.data === 'string' ? a.data : from,
+      ip,
       mac: /_([0-9a-f]{12})$/i.exec(instance)?.[1]?.toUpperCase(),
       via: ['mdns'],
       type,
@@ -84,9 +110,6 @@ export function browseMdns(
     },
   };
 }
-
-const toInt = (ip: string) => ip.split('.').reduce((n, part) => n * 256 + Number(part), 0);
-const toIp = (n: number) => [24, 16, 8, 0].map((s) => Math.floor(n / 2 ** s) % 256).join('.');
 
 // Addresses to ask in the computer's networks: all hosts except its own, networks larger
 // than /24 only in the 254 addresses around its own address.

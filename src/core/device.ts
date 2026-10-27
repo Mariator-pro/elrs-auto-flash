@@ -17,7 +17,11 @@ export interface DeviceInfo {
   customHardware?: boolean; // hardware layout changed by hand in the web page (reported from 4.x on)
 }
 
-const str = (v: unknown): string | undefined => (typeof v === 'string' && v !== '' ? v : undefined);
+// Text from a device as it is shown, kept and printed: without control characters, which in a terminal
+// could move the cursor, change colours or the window title, nor those that turn the direction of text.
+export const printable = (s: string) => s.replace(/[\p{Cc}\u202a-\u202e\u2066-\u2069]/gu, '');
+
+const str = (v: unknown): string | undefined => (typeof v === 'string' && printable(v) !== '' ? printable(v) : undefined);
 
 // Reads the answer of /config; undefined when it is not one of an ELRS device from 4.0 on.
 export function parseConfig(json: unknown): DeviceInfo | undefined {
@@ -102,7 +106,7 @@ export interface UploadResult {
   params?: MsgParams;
 }
 
-const plain = (html: string) => html.replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
+const plain = (html: string) => printable(html).replace(/<br\s*\/?>/gi, ' ').replace(/<[^>]+>/g, '').replace(/\s+/g, ' ').trim();
 
 // Uploads a firmware file as the device's web page does: POST /update with the file in the form
 // field "data" and its size in X-FileSize. Never with a "force" field: that makes the device skip

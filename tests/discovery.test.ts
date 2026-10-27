@@ -79,6 +79,27 @@ describe('parseMdnsResponse', () => {
     expect(parseMdnsResponse({}, '10.0.0.5')).toEqual([]);
   });
 
+  it('asks only addresses in private or own networks, not this computer or the internet', () => {
+    const own = [{ address: '100.70.1.2', netmask: '255.255.255.0' }];
+    const ip = (a: string, from: string) => parseMdnsResponse(elrsResponse('A1B2C3D4E5F6', a), from, own)[0]?.ip;
+    expect(ip('172.20.0.8', '172.20.0.8')).toBe('172.20.0.8');
+    expect(ip('100.70.1.9', '100.70.1.9')).toBe('100.70.1.9');
+    // an A record elsewhere: the sender's address
+    expect(ip('127.0.0.1', '192.168.1.37')).toBe('192.168.1.37');
+    expect(ip('8.8.8.8', '192.168.1.37')).toBe('192.168.1.37');
+    expect(ip('100.70.1.2', '10.0.0.5')).toBe('10.0.0.5');
+    // nothing that may be asked: no device
+    expect(ip('127.0.0.1', '127.0.0.1')).toBeUndefined();
+    expect(ip('8.8.8.8', '1.1.1.1')).toBeUndefined();
+    expect(ip('224.0.0.251', '100.70.1.2')).toBeUndefined();
+    expect(ip('not-an-ip', 'fe80::1')).toBeUndefined();
+  });
+
+  it('drops control characters from what a device announces', () => {
+    const p = elrsResponse('A1B2C3D4E5F6', '10.0.0.5', { product: 'RP1\u001b]0;owned\u0007 RX\u202e', device: '\u001b[2J' });
+    expect(parseMdnsResponse(p, '10.0.0.5')[0]).toMatchObject({ product: 'RP1]0;owned RX', device: '[2J' });
+  });
+
   it('has no MAC when the instance name carries none', () => {
     const p: MdnsPacket = { answers: [{ name: 'elrs_rx._http._tcp.local', type: 'TXT', data: txt({ vendor: 'elrs', type: 'rx' }) }] };
     expect(parseMdnsResponse(p, '10.0.0.5')[0]?.mac).toBeUndefined();

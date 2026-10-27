@@ -37,6 +37,14 @@ describe('parseConfig', () => {
     expect(info).toMatchObject({ type: 'tx', version: '4.1.0-RC1', domainLow: 'EU868', domainHigh: 'ISM2G4' });
   });
 
+  it('drops control characters from what the device reports', () => {
+    const info = parseConfig({
+      settings: { target: 'UNIFIED_ESP32_2400_RX', version: '4.1.0', product_name: '\u001b]0;owned\u0007RP4TD\u202e', lua_name: '\u001b[2J', 'module-type': 'rx' },
+    });
+    expect(info).toMatchObject({ product: ']0;ownedRP4TD', device: '[2J' });
+    expect(parseConfig({ settings: { target: 'X', version: '4.1.0', product_name: '\u001b\u0007', 'module-type': 'rx' } })).toBeUndefined();
+  });
+
   it('rejects answers that are not those of an ELRS device', () => {
     expect(parseConfig(null)).toBeUndefined();
     expect(parseConfig({})).toBeUndefined();
