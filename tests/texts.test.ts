@@ -17,7 +17,7 @@ describe('messages of the program', () => {
   it('show messages of devices as they came', () => {
     expect(message({ message: 'Current target: X.' }, de)).toBe('Current target: X.');
     expect(resultText({ result: 'mismatch', message: 'Current target: X.' }, '4.1.0', de)).toBe(
-      'Firmware passt nicht zum Target, vom Gerät abgelehnt: Current target: X.',
+      'vom Gerät abgelehnt, die Firmware passt nicht zum Target: Current target: X.',
     );
   });
 
@@ -28,7 +28,7 @@ describe('messages of the program', () => {
 
 describe('texts', () => {
   it('end a message as a sentence once, before the next one follows', () => {
-    expect(de.noticeFailedText(sentence(message(msg('uploadTimeout'), de)))).toMatch(/^Letzter Fehler: keine Antwort vom Gerät\. Prüf/);
+    expect(de.noticeFailedText(sentence(message(msg('uploadTimeout'), de)))).toMatch(/^Letzter Fehler: das Gerät hat nicht geantwortet\. Prüfe/);
     expect(de.noticeFailedText(sentence(message(msg('stillRuns', { version: '4.0.1', to: '4.1.0' }), de)))).not.toContain('..');
   });
 

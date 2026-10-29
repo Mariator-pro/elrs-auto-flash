@@ -47,12 +47,12 @@ describe('fetchReleases', () => {
 
   it('explains the rate limit, other answers and a missing connection', async () => {
     const reset = String(Date.UTC(2026, 9, 25, 14, 30) / 1000);
-    await expect(fetchReleases(answer(403, { 'x-ratelimit-reset': reset }))).rejects.toThrow(/rate limit reached, try again after \d\d:\d\d/);
-    await expect(fetchReleases(answer(500))).rejects.toThrow('GitHub answered 500');
+    await expect(fetchReleases(answer(403, { 'x-ratelimit-reset': reset }))).rejects.toThrow(/Too many requests to GitHub\. Try again after \d\d:\d\d\./);
+    await expect(fetchReleases(answer(500))).rejects.toThrow('GitHub answered with error 500.');
     const offline = (async () => {
       throw new TypeError('fetch failed');
     }) as unknown as FetchFn;
-    await expect(fetchReleases(offline)).rejects.toThrow('No connection to GitHub');
+    await expect(fetchReleases(offline)).rejects.toThrow("Can't reach GitHub");
   });
 });
 
@@ -101,8 +101,8 @@ describe('kept list of releases', () => {
     await writeJson(p.releases, { checked: '2026-10-01T00:00:00Z', releases: [{ tag: '4.1.0', prerelease: false, published: '2026-07-17T18:54:49Z' }] });
     const { list, error } = await currentReleases(p, answer(500), new Date('2026-10-25T12:00:00Z'));
     expect(list?.releases).toHaveLength(1);
-    expect(error).toEqual({ message: 'GitHub answered 500', code: 'githubStatus', params: { status: 500 } });
-    expect(await currentReleases(paths(await tempDir()), answer(500))).toEqual({ list: undefined, error: { message: 'GitHub answered 500', code: 'githubStatus', params: { status: 500 } } });
+    expect(error).toEqual({ message: 'GitHub answered with error 500.', code: 'githubStatus', params: { status: 500 } });
+    expect(await currentReleases(paths(await tempDir()), answer(500))).toEqual({ list: undefined, error: { message: 'GitHub answered with error 500.', code: 'githubStatus', params: { status: 500 } } });
   });
 });
 

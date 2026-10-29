@@ -61,7 +61,7 @@ describe('firmwareFor', () => {
   it('refuses unknown products and products without WiFi upload', async () => {
     const zip = await zipFile();
     await expect(firmwareFor(zip, { target: 'UNIFIED_ESP32_2400_RX', product: 'Nope' })).rejects.toThrow('has no firmware for "Nope"');
-    await expect(firmwareFor(zip, { target: 'UNIFIED_ESP8285_2400_RX', product: 'Some UART RX' })).rejects.toThrow('cannot be updated over WiFi');
+    await expect(firmwareFor(zip, { target: 'UNIFIED_ESP8285_2400_RX', product: 'Some UART RX' })).rejects.toThrow("can't be updated over WiFi");
   });
 });
 
@@ -88,7 +88,7 @@ describe('ensureArchive', () => {
     const p = paths(await tempDir());
     const zip = testArchive();
     await expect(ensureArchive(p, '9.9.9', server(zip).fetchFn)).rejects.toThrow('has no firmware for 9.9.9');
-    await expect(ensureArchive(p, '../4.1.0', server(zip).fetchFn)).rejects.toThrow('Not a version');
+    await expect(ensureArchive(p, '../4.1.0', server(zip).fetchFn)).rejects.toThrow("isn't a version");
     await expect(ensureArchive(p, '4.1.0', server(zip, 100).fetchFn)).rejects.toThrow('incomplete or damaged');
     expect(await readdir(join(p.firmware, '4.1.0'))).toEqual([]);
     // another answer than the archive, of the announced size all the same
@@ -97,7 +97,7 @@ describe('ensureArchive', () => {
     const offline = (async () => {
       throw new TypeError('fetch failed');
     }) as unknown as FetchFn;
-    await expect(ensureArchive(p, '4.1.0', offline)).rejects.toThrow('No connection to the ExpressLRS download server');
+    await expect(ensureArchive(p, '4.1.0', offline)).rejects.toThrow("Can't reach the ExpressLRS download server");
   });
 
   it('takes an archive that came packed, whose size differs from the announced one', async () => {

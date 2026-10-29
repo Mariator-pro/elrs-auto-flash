@@ -146,9 +146,9 @@ describe('prepareFlash', () => {
   it('refuses devices that are current, newer or own builds, and own builds only by hand', async () => {
     const p = await withArchive();
     const f = { fetchFn: local as typeof fetch };
-    await expect(prepareFlash(p, (await receiver({ version: '4.1.0' })).host, '4.1.0', false, f)).rejects.toThrow('already has 4.1.0');
-    await expect(prepareFlash(p, (await receiver({ version: '4.1.1' })).host, '4.1.0', true, f)).rejects.toThrow('never downgraded');
-    await expect(prepareFlash(p, (await receiver({ version: '2.5.2' })).host, '4.1.0', true, f)).rejects.toThrow('not supported');
+    await expect(prepareFlash(p, (await receiver({ version: '4.1.0' })).host, '4.1.0', false, f)).rejects.toThrow('already runs 4.1.0');
+    await expect(prepareFlash(p, (await receiver({ version: '4.1.1' })).host, '4.1.0', true, f)).rejects.toThrow('never takes a device back to an older version');
+    await expect(prepareFlash(p, (await receiver({ version: '2.5.2' })).host, '4.1.0', true, f)).rejects.toThrow("doesn't support");
     await expect(prepareFlash(p, (await receiver({ version: 'master' })).host, '4.1.0', false, f)).rejects.toThrow('custom build');
     expect((await prepareFlash(p, (await receiver({ version: 'master' })).host, '4.1.0', true, f)).to).toBe('4.1.0');
   });
@@ -157,7 +157,7 @@ describe('prepareFlash', () => {
     const p = await withArchive();
     const dev = await receiver({ target: 'UNIFIED_ESP32_900_RX', product: 'Mislabeled 900 RX' });
     await expect(prepareFlash(p, dev.host, '4.1.0', false, { fetchFn: local as typeof fetch })).rejects.toThrow(
-      "does not match the device's target UNIFIED_ESP32_900_RX; nothing was sent",
+      "doesn't match the device's target (UNIFIED_ESP32_900_RX). The app sent nothing.",
     );
     expect(dev.asked.some((a) => a.startsWith('POST'))).toBe(false);
   });

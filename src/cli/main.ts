@@ -35,18 +35,18 @@ const HELP = `Usage: elrs-auto-flash <command> [options]
 
 Commands:
   ui         open the browser interface: keeps looking for devices and, with auto update on,
-             flashes them, like watch
+             updates them, like watch
   list       look for ELRS receivers and transmitter modules on the network and show them,
-             with their state against the target version
-  releases   check GitHub for ExpressLRS releases and show the newest of each major version
+             with their status against the target version
+  releases   check GitHub for ExpressLRS versions and show the newest of each major version
   update <device>
-             flash one device to the target version, keeping its binding phrase, regulatory
+             update one device to the target version, keeping its binding phrase, regulatory
              domain and WiFi; <device> is its IP address, MAC, own name, Lua name or product name
-  watch      keep looking for devices until Ctrl+C; with auto update on, flash every device
-             with an update, one at a time
+  watch      keep looking for devices until Ctrl+C; with auto update on, update every device
+             that has an update, one at a time
   dismiss <device>
-             clear the notice of a device whose target was refused or that failed 3 times,
-             so it is flashed again
+             clear the notice of a device whose firmware didn't match its target or that failed
+             3 times, so it can be updated again
   forget <device>
              remove a device from the list of known devices
   rename <device> <name>
@@ -56,24 +56,24 @@ Commands:
 Options:
   --time <seconds>               list, update: how long to listen for devices (default 10)
   --dry-run                      update: prepare the file and show what would happen, send nothing
-  --yes                          update: flash without asking
+  --yes                          update: update without asking
   --target-major <n|none>        settings: major version all devices are kept on, e.g. 4
-  --auto-update <on|off>         settings: let watch flash devices with an update without asking
-  --release-candidates <on|off>  settings: also bring devices to release candidates
+  --auto-update <on|off>         settings: let watch update devices without asking
+  --release-candidates <on|off>  settings: devices also get release candidates
 `;
 
 const NOTHING_FOUND = `No ELRS devices found.
-A device is only on the network while its WiFi is on: power it without its transmitter and wait about
-a minute, or turn on WiFi in the ELRS Lua script. To join your home network instead of opening its own
-"ExpressLRS RX" network, the home network must be set up once in the device's web page.`;
+Devices show up only while their WiFi is on. Power a receiver with the radio off and wait about a minute,
+or turn on WiFi in the ELRS Lua script for a transmitter module. A device joins your home network only once
+you've entered that network on the device's web page; until then it opens its own network.`;
 
 const BLOCKED =
   process.platform === 'darwin'
-    ? `Almost every address on the network answered "no route to host" at once: macOS does not let this
-terminal into the local network. Allow it in System Settings, Privacy & Security, Local Network (for
+    ? `Almost every address on the network answered "no route to host" at once: macOS doesn't let this
+terminal into the local network. Allow it in System Settings > Privacy & Security > Local Network (for
 example Terminal, iTerm or Visual Studio Code), then quit the app and open it again.`
     : `Almost every address on the network answered "no route to host" at once: the system or a firewall
-seems to block this program from the local network.`;
+seems to block this program from the local network. Allow it in the firewall settings.`;
 
 class UserError extends Error {}
 
@@ -92,13 +92,13 @@ function target(s: Settings, list: ReleaseList | undefined): VersionedRelease | 
 
 // What the target version is, and whether a newer major version is out.
 function targetLines(s: Settings, list: ReleaseList | undefined, t: VersionedRelease | undefined): string[] {
-  if (s.targetMajor === undefined) return ['No target version set, so nothing would be updated. Choose one, e.g.: settings --target-major 4'];
-  if (!list) return [`Target: major version ${s.targetMajor}, but no list of releases yet (run "releases").`];
-  if (!t) return [`Target: major version ${s.targetMajor}, but ExpressLRS has no release of it.`];
-  const lines = [`Target version: ${t.tag} (newest ${s.releaseCandidates ? 'release incl. release candidates' : 'release'} of ${s.targetMajor}.x)`];
+  if (s.targetMajor === undefined) return ['No target version set, so no device is updated. Choose one, e.g.: settings --target-major 4'];
+  if (!list) return [`Target: major version ${s.targetMajor}, but no list of versions yet (run "releases").`];
+  if (!t) return [`Target: major version ${s.targetMajor}, but ExpressLRS has no version of it.`];
+  const lines = [`Target version: ${t.tag} (newest ${s.releaseCandidates ? `${s.targetMajor}.x version, including release candidates` : `stable ${s.targetMajor}.x version`})`];
   const newest = majorVersions(list.releases)[0];
   if (newest !== undefined && newest > s.targetMajor) {
-    lines.push(`ExpressLRS ${newest}.x is out. Transmitters and receivers need the same major version: switch with "settings --target-major ${newest}" once your transmitters are on ${newest}.x.`);
+    lines.push(`ExpressLRS ${newest}.x is out. Radios and receivers need the same major version: switch with "settings --target-major ${newest}" once your radios run ${newest}.x.`);
   }
   return lines;
 }
@@ -110,28 +110,28 @@ function stateLine(d: Partial<KnownDevice>, state: WatchState, t: VersionedRelea
     case 'update':
       return `update available: ${d.version} → ${t!.tag}`;
     case 'newer':
-      return `newer than the target version ${t!.tag}, left as it is`;
+      return `newer than the target version ${t!.tag}; never taken back to an older version`;
     case 'custom-build':
-      return 'custom build (branch name instead of a version), only updated by hand';
+      return 'custom build (branch name instead of a version), only updated when you start it with "update"';
     case 'no-target-version':
       return 'no target version';
     case 'unsupported':
-      if (d.unsupported && d.unsupported.tag === t?.tag) return `cannot be flashed with ${t.tag}: ${d.unsupported.reason}`;
+      if (d.unsupported && d.unsupported.tag === t?.tag) return `can't be updated to ${t.tag}: ${d.unsupported.reason}`;
       return d.version ? `not supported: below ExpressLRS ${MIN_MAJOR}.0` : 'not supported: no version reported';
     case 'unconfirmed':
       return d.type === 'tx'
-        ? `flashed to ${d.unconfirmed?.tag}, not seen since; confirmed once its WiFi is turned on again in the radio's ExpressLRS menu`
-        : `flashed to ${d.unconfirmed?.tag}, not seen since; confirmed once it is back on the network`;
+        ? `updated to ${d.unconfirmed?.tag}, not seen since; turn its WiFi on again in the ELRS Lua script to confirm the update`
+        : `updated to ${d.unconfirmed?.tag}, not seen since; confirmed once it's back on the network`;
     case 'mismatch':
-      return `firmware does not match its target, nothing flashed, never forced: ${d.notice?.message}
-            Check the device, then "dismiss ${d.mac ?? d.ip}" to let it be flashed again.`;
+      return `firmware doesn't match its target; the device keeps its old firmware, the update is never forced: ${d.notice?.message}
+            Check the device, then run "dismiss ${d.mac ?? d.ip}" to allow it again.`;
     case 'failed':
-      return `${MAX_FAILURES} attempts failed, the last: ${d.notice?.message}
-            Check the device, then "dismiss ${d.mac ?? d.ip}" to let it be flashed again.`;
+      return `update failed ${MAX_FAILURES} times, last error: ${d.notice?.message}
+            Check the device, then run "dismiss ${d.mac ?? d.ip}" to allow it again.`;
     case 'queued':
-      return 'waiting to be flashed';
+      return 'waiting for its update';
     case 'flashing':
-      return 'being flashed';
+      return 'updating';
   }
 }
 
@@ -139,7 +139,7 @@ function stateLine(d: Partial<KnownDevice>, state: WatchState, t: VersionedRelea
 async function list(p: Paths, seconds: number): Promise<void> {
   const s = await loadSettings(p);
   const { list: releases, error } = await currentReleases(p);
-  if (error) console.log(`Could not check for releases: ${error.message}${releases ? ` (using the list from ${when(releases.checked)})` : ''}`);
+  if (error) console.log(`Couldn't check for new versions: ${error.message}${releases ? ` (using the list from ${when(releases.checked)})` : ''}`);
   const t = target(s, releases);
   targetLines(s, releases, t).forEach((l) => console.log(l));
   console.log(`\nLooking for ELRS devices for ${seconds} s ...`);
@@ -155,7 +155,7 @@ async function list(p: Paths, seconds: number): Promise<void> {
     console.log(`${deviceLabel(rec)}  (${kind})`);
     if (d.product && d.product !== d.device) console.log(`  Product   ${d.product}`);
     console.log(`  Version   ${d.version ?? 'unknown'}`);
-    console.log(`  State     ${stateLine(rec, knownState(rec, t), t)}`);
+    console.log(`  Status    ${stateLine(rec, knownState(rec, t), t)}`);
     console.log(`  Target    ${d.target ?? 'unknown'}`);
     const domain = [d.domainHigh, d.domainLow].filter(Boolean).join(', ');
     console.log(`  Domain    ${domain || 'unknown'}`);
@@ -166,7 +166,7 @@ async function list(p: Paths, seconds: number): Promise<void> {
     for (const k of away) {
       console.log(`${deviceLabel(k)}  (last seen ${when(k.lastSeen)} at ${k.ip}${k.mac ? `, MAC ${k.mac}` : ''})`);
       console.log(`  Version   ${k.version ?? 'unknown'}`);
-      console.log(`  State     ${stateLine(k, knownState(k, t), t)}\n`);
+      console.log(`  Status    ${stateLine(k, knownState(k, t), t)}\n`);
     }
   }
 }
@@ -214,8 +214,8 @@ function showPlan(plan: FlashPlan): void {
   }
   console.log('Checked     the file carries the target of the device');
   if (deviceState(d.version, undefined) === 'custom-build') {
-    console.log(`\nThe device runs a custom build (${d.version}). If that build is newer than ${plan.to}, flashing can reset`);
-    console.log('its settings (e.g. model match, outputs, protocol); the options above, binding phrase and WiFi, stay.');
+    console.log(`\nThe device runs a custom build (${d.version}). If that build is newer than ${plan.to}, flashing ${plan.to} can reset`);
+    console.log("its settings (e.g. model match, outputs, protocol). The options above, binding phrase and WiFi stay.");
   }
 }
 
@@ -237,22 +237,22 @@ function resultLines(r: FlashResult, to: string): { ok: boolean; text: string } 
       if (r.check === 'wifi-off') {
         return {
           ok: true,
-          text: `Uploaded. A transmitter module restarts with its WiFi off, so ${to} is not confirmed yet.
-Turn its WiFi on again in the radio's ExpressLRS menu, then check with "list".`,
+          text: `Uploaded. A transmitter module restarts with its WiFi off, so ${to} isn't confirmed yet.
+Turn its WiFi on again in the ELRS Lua script, then check with "list".`,
         };
       }
       return {
         ok: true,
-        text: `Uploaded, but the device did not come back within 3 minutes, so ${to} is not confirmed yet.
-Leave its transmitter off: after a restart its WiFi comes on again after about 60 s. Then check with "list".`,
+        text: `Uploaded, but the device didn't come back within 3 minutes, so ${to} isn't confirmed yet.
+Keep the radio off: after a restart the device's WiFi comes on after about a minute. Then check with "list".`,
       };
     case 'wrong-version':
-      return { ok: false, text: `The device is back, but still runs ${r.version} instead of ${to}. The update did not take.` };
+      return { ok: false, text: `The device is back, but still runs ${r.version} instead of ${to}. The update didn't take.` };
     case 'mismatch':
       return {
         ok: false,
-        text: `The device refused the file because it is not for its target: ${r.message}
-Nothing was flashed. This is never forced.`,
+        text: `The device rejected the firmware because it doesn't match its target: ${r.message}
+It keeps its old firmware. The update is never forced.`,
       };
     case 'failed':
       return { ok: false, text: `The upload failed: ${r.message}\nCheck the device with "list" before trying again.` };
@@ -262,7 +262,7 @@ Nothing was flashed. This is never forced.`,
 async function update(p: Paths, name: string, opts: { seconds: number; dryRun: boolean; yes: boolean }): Promise<void> {
   const other = await running(p.server);
   if (other) {
-    const button = other.kind === 'app' || other.kind === 'browser' ? `\nOr use the device's button there.` : '';
+    const button = other.kind === 'app' || other.kind === 'browser' ? `\nOr start the update there with "Update to ..." on the device.` : '';
     throw new UserError(`${busy(other)}.${button}`);
   }
   const forget = await noteRunning(p.server, { kind: 'update' });
@@ -276,7 +276,7 @@ async function update(p: Paths, name: string, opts: { seconds: number; dryRun: b
 async function updateDevice(p: Paths, name: string, opts: { seconds: number; dryRun: boolean; yes: boolean }): Promise<void> {
   const s = await loadSettings(p);
   const { list: releases, error } = await currentReleases(p);
-  if (error) console.log(`Could not check for releases: ${error.message}${releases ? ` (using the list from ${when(releases.checked)})` : ''}`);
+  if (error) console.log(`Couldn't check for new versions: ${error.message}${releases ? ` (using the list from ${when(releases.checked)})` : ''}`);
   const t = target(s, releases);
   if (!t || !releases) throw new UserError(targetLines(s, releases, t).join('\n'));
   const ip = await findDevice(p, name, opts.seconds);
@@ -305,13 +305,13 @@ async function updateDevice(p: Paths, name: string, opts: { seconds: number; dry
     console.log('\nDry run: nothing was sent to the device.');
     return;
   }
-  if (!opts.yes && !(await confirm('\nFlash this device now? [y/N] '))) {
-    console.log(process.stdin.isTTY ? 'Not flashed.' : '\nNot flashed: add --yes to flash without asking.');
+  if (!opts.yes && !(await confirm('\nUpdate this device now? [y/N] '))) {
+    console.log(process.stdin.isTTY ? 'Not updated.' : '\nNot updated: add --yes to update without asking.');
     return;
   }
   const r = await runFlash(plan, {
     onStep: (step) =>
-      console.log(step === 'upload' ? '\nUploading ...' : 'Uploaded. The device restarts; waiting up to 3 minutes for it to come back ...'),
+      console.log(step === 'upload' ? '\nUploading firmware ...' : 'Uploaded. The device is restarting; waiting up to 3 minutes for it to come back ...'),
   });
   await updateKnown(p, (l) => l.filter((k) => k.key === key).forEach((k) => recordResult(k, plan.to, r)));
   const { ok, text } = resultLines(r, plan.to);
@@ -340,7 +340,7 @@ async function dismissCommand(p: Paths, name: string): Promise<void> {
     return;
   }
   await updateKnown(p, (l) => l.filter((k) => k.key === key).forEach(dismissNotice));
-  console.log(`Dismissed the notice of ${product ?? 'the device'}. It is flashed again by auto update or "update".`);
+  console.log(`Cleared the notice of ${product ?? 'the device'}. Auto update or "update" can update it again.`);
 }
 
 async function forget(p: Paths, name: string): Promise<void> {
@@ -374,7 +374,7 @@ function watchLine(e: WatchEvent): string | undefined {
       return [
         ...targetLines(e.settings, e.releases, e.target),
         e.settings.autoUpdate
-          ? 'Auto update is on: devices with an update are flashed one at a time.'
+          ? 'Auto update is on: devices with an update are updated automatically, one at a time.'
           : 'Auto update is off: devices are only shown. Turn it on with "settings --auto-update on" (also while this runs).',
       ].join('\n');
     case 'device': {
@@ -385,33 +385,33 @@ function watchLine(e: WatchEvent): string | undefined {
       return `${named(d)}: ${stateLineFor(e)}`;
     }
     case 'step':
-      if (e.step === 'prepare') return `${named(e.device)}: preparing the firmware`;
-      if (e.step === 'download') return `${named(e.device)}: downloading the firmware archive${e.percent !== undefined ? ` ... ${e.percent} %` : ''}`;
-      if (e.step === 'upload') return `${named(e.device)}: uploading`;
-      return `${named(e.device)}: uploaded; the device restarts, waiting up to 3 minutes for it to come back`;
+      if (e.step === 'prepare') return `${named(e.device)}: preparing firmware ...`;
+      if (e.step === 'download') return `${named(e.device)}: downloading firmware ...${e.percent !== undefined ? ` ${e.percent} %` : ''}`;
+      if (e.step === 'upload') return `${named(e.device)}: uploading firmware ...`;
+      return `${named(e.device)}: uploaded; the device is restarting, waiting up to 3 minutes for it to come back`;
     case 'result': {
       const o = e.outcome;
       const n = named(e.device);
       if (o.result === 'stopped') {
-        if (o.kind === 'gone') return `${n}: no longer answers; tried again when it is back`;
+        if (o.kind === 'gone') return `${n}: doesn't answer any more; tried again when it's back`;
         if (o.kind === 'download') return `${n}: ${o.message} Trying again in a minute.`;
-        if (o.kind === 'unsupported') return `${n}: cannot be flashed with ${e.to}: ${o.message}`;
+        if (o.kind === 'unsupported') return `${n}: can't be updated to ${e.to}: ${o.message}`;
         return `${n}: ${o.message}`;
       }
       if (e.later && o.result === 'done') return `${n}: back with ${o.version}, update confirmed`;
       if (e.later && o.result === 'wrong-version') return `${n}: back, but still runs ${o.version}; tried again (at most ${MAX_FAILURES} times)`;
       if (o.result === 'done') return `${n}: done, runs ${o.version}`;
-      if (o.result === 'unconfirmed' && o.check === 'later') return `${n}: uploaded; confirmed once it is back on the network`;
-      if (o.result === 'unconfirmed' && o.check === 'wifi-off') return `${n}: uploaded; turn its WiFi on again in the radio's ExpressLRS menu to confirm the update`;
-      if (o.result === 'unconfirmed') return `${n}: not back within 3 minutes; confirmed once it shows up again`;
+      if (o.result === 'unconfirmed' && o.check === 'later') return `${n}: uploaded; confirmed once it's back on the network`;
+      if (o.result === 'unconfirmed' && o.check === 'wifi-off') return `${n}: uploaded; turn its WiFi on again in the ELRS Lua script to confirm the update`;
+      if (o.result === 'unconfirmed') return `${n}: not back within 3 minutes; confirmed once it's back on the network`;
       if (o.result === 'wrong-version') return `${n}: still runs ${o.version} after the update; tried again in a minute (at most ${MAX_FAILURES} times)`;
       if (o.result === 'failed') return `${n}: upload failed: ${o.message}; tried again in a minute (at most ${MAX_FAILURES} times)`;
-      return `${n}: refused the firmware as not for its target: ${o.message} It is never forced.`;
+      return `${n}: rejected the firmware, it doesn't match its target: ${o.message} The update is never forced.`;
     }
     case 'problem':
       if (e.message === undefined || e.problem === 'download') return undefined; // gone again, or reported with the device
       if (e.problem === 'blocked') return BLOCKED;
-      if (e.problem === 'releases') return `Could not check for releases: ${e.message.message}`;
+      if (e.problem === 'releases') return `Couldn't check for new versions: ${e.message.message}`;
       return `Error: ${e.message.message}`;
     case 'removed':
     case 'scanned':
@@ -430,13 +430,13 @@ function openBrowser(url: string): void {
 function busy(r: Runner & { pid: number }): string {
   switch (r.kind) {
     case 'app':
-      return 'The ELRS Auto Flash app runs and flashes devices; quit it first';
+      return 'The ELRS Auto Flash app is running and updates devices; quit it first';
     case 'browser':
-      return `The browser interface runs at ${r.url} and flashes devices; stop it first (Ctrl+C in the terminal where it runs)`;
+      return `The browser interface is running at ${r.url} and updates devices; stop it first (Ctrl+C in the terminal where it runs)`;
     case 'watch':
-      return `watch runs in another terminal (process ${r.pid}) and flashes devices; stop it first (Ctrl+C there)`;
+      return `watch is running in another terminal (process ${r.pid}) and updates devices; stop it first (Ctrl+C there)`;
     case 'update':
-      return `update flashes a device in another terminal (process ${r.pid}); wait until it is done`;
+      return `update is updating a device in another terminal (process ${r.pid}); wait until it's done`;
   }
 }
 
@@ -445,7 +445,7 @@ async function ui(p: Paths): Promise<void> {
   if (!existsSync(join(staticDir, 'index.html'))) throw new UserError('Build the interface first: npm run build');
   const other = await running(p.server);
   if (other?.kind === 'app' || other?.kind === 'browser') {
-    console.log(`ELRS Auto Flash already runs at ${other.url}`);
+    console.log(`ELRS Auto Flash is already running at ${other.url}`);
     openBrowser(other.url);
     return;
   }
@@ -457,12 +457,12 @@ async function ui(p: Paths): Promise<void> {
   const stop = () => {
     if (stopping) process.exit(130);
     stopping = true;
-    if (server.flashing()) console.log('\nA device is being flashed: stopping once it is done. Press Ctrl+C again to quit right away.');
+    if (server.flashing()) console.log("\nA device is updating: stopping once it's done. Press Ctrl+C again to quit right away.");
     void server.close().finally(() => void forget().finally(() => process.exit(0)));
   };
   process.on('SIGINT', stop);
   process.on('SIGTERM', stop);
-  console.log(`ELRS Auto Flash runs at ${server.open} (Ctrl+C to stop)`);
+  console.log(`ELRS Auto Flash is running at ${server.open} (Ctrl+C to stop)`);
   openBrowser(server.open);
 }
 
@@ -470,7 +470,7 @@ async function watch(p: Paths): Promise<void> {
   const other = await running(p.server);
   if (other) throw new UserError(`${busy(other)}.`);
   const forget = await noteRunning(p.server, { kind: 'watch' });
-  console.log('Watching for ELRS devices (mDNS, and a scan of the network every minute). Ctrl+C to stop.\n');
+  console.log('Watching for ELRS devices (mDNS, and a search of the network every minute). Ctrl+C to stop.\n');
   const w = createWatcher(p, (e) => {
     if (e.kind === 'setup') watchTarget = e.target;
     const line = watchLine(e);
@@ -480,7 +480,7 @@ async function watch(p: Paths): Promise<void> {
   process.on('SIGINT', () => {
     if (stopping) process.exit(130);
     stopping = true;
-    if (w.flashing()) console.log('\nA device is being flashed: stopping once it is done. Press Ctrl+C again to quit right away.');
+    if (w.flashing()) console.log("\nA device is updating: stopping once it's done. Press Ctrl+C again to quit right away.");
     void w.stop().finally(() => void forget().finally(() => process.exit(0)));
   });
   w.start();
@@ -489,7 +489,7 @@ async function watch(p: Paths): Promise<void> {
 async function releases(p: Paths): Promise<void> {
   const s = await loadSettings(p);
   const list = await checkReleases(p);
-  console.log(`ExpressLRS releases (checked ${when(list.checked)}):`);
+  console.log(`ExpressLRS versions (checked ${when(list.checked)}):`);
   for (const major of majorVersions(list.releases)) {
     const final = targetRelease(list.releases, major, false)!;
     const rc = targetRelease(list.releases, major, true)!;
@@ -520,7 +520,7 @@ async function settings(p: Paths, opts: { targetMajor?: string; autoUpdate?: str
     if (!Number.isInteger(major) || major < MIN_MAJOR) throw new UserError(`--target-major needs a major version from ${MIN_MAJOR} on, e.g. 4, or "none".`);
     const { list } = await currentReleases(p);
     if (list && !majorVersions(list.releases).includes(major)) {
-      throw new UserError(`ExpressLRS has no release of ${major}.x. Known: ${majorVersions(list.releases).map((m) => `${m}.x`).join(', ')}.`);
+      throw new UserError(`ExpressLRS has no version ${major}.x. Known: ${majorVersions(list.releases).map((m) => `${m}.x`).join(', ')}.`);
     }
     s.targetMajor = major;
     changed = true;

@@ -17,11 +17,11 @@ describe('firmwareEnd', () => {
 
   it('rejects files that are no ESP image or are cut short', () => {
     const { image } = espImage(TARGET);
-    expect(() => firmwareEnd(Buffer.from('not firmware at all, really not'))).toThrow('not an ESP image');
-    expect(() => firmwareEnd(image.subarray(0, 60))).toThrow('cut short');
+    expect(() => firmwareEnd(Buffer.from('not firmware at all, really not'))).toThrow("isn't an ESP image");
+    expect(() => firmwareEnd(image.subarray(0, 60))).toThrow('incomplete');
     const broken = Buffer.from(espImage(TARGET, true).image);
     broken[0x1000] = 0;
-    expect(() => firmwareEnd(broken)).toThrow('not an ESP image');
+    expect(() => firmwareEnd(broken)).toThrow("isn't an ESP image");
   });
 });
 
