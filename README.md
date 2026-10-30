@@ -39,8 +39,6 @@ The app is not signed with an Apple or Microsoft certificate, so the system warn
 - **Windows**: if a SmartScreen window appears, click "More info" and then "Run anyway".
 - **Linux**: no warning. If the file manager does not start the AppImage, mark it as executable (`chmod +x`).
 
-Signing the Windows version is applied for at the SignPath Foundation, see [Code signing policy](#code-signing-policy).
-
 The app needs the local network to find devices:
 
 - **macOS** asks on first start whether ELRS Auto Flash may find devices on the local network. Allow it; if you said no, turn it on in System Settings, Privacy & Security, Local Network, and start the app again.
@@ -135,26 +133,6 @@ You do not need any of this to use the app. It is for those who want to go furth
 - [Browser interface](docs/browser-interface.md): the same pages as the desktop app, in your web browser
 - [Command line](docs/command-line.md): finding, updating and watching devices from the terminal
 - [Development](docs/development.md): running from source, building the app and making a release
-
-## Code signing policy
-
-Free code signing provided by [SignPath.io](https://about.signpath.io), certificate by [SignPath Foundation](https://signpath.org).
-
-The Windows version is not signed yet: the application to the SignPath Foundation is pending. Once accepted, every Windows release is built by GitHub Actions from the source code in this repository and signed only after a manual approval.
-
-- Committers and reviewers: [Mariator-pro](https://github.com/Mariator-pro)
-- Approvers: [Mariator-pro](https://github.com/Mariator-pro)
-
-### Privacy policy
-
-The app doesn't collect or send any personal data, settings or device information to the developer or to anyone else. To do its job it connects to:
-
-- devices on your local network, to find ExpressLRS receivers and transmitter modules and update them
-- GitHub (api.github.com, github.com), to look up ExpressLRS versions and a newer version of the app itself, each time the app starts
-- the ExpressLRS firmware archive (artifactory.expresslrs.org), to download firmware when a device is updated
-- the ExpressLRS Web Flasher (expresslrs.github.io), only when you open the "Web Flasher" page
-
-See the [GitHub Privacy Statement](https://docs.github.com/site-policy/privacy-policies/github-general-privacy-statement) for what GitHub records about these requests.
 
 ## License
 
