@@ -1,6 +1,7 @@
 import { Button, Card, ListBox, Select, Switch } from '@heroui/react';
 import type { StateView } from '../../server/api.ts';
 import { post } from '../api.ts';
+import { AboutCard } from '../components/About.tsx';
 import { FolderIcon } from '../components/icons.tsx';
 import { usePrefs } from '../usePrefs.ts';
 
@@ -97,6 +98,8 @@ export function SettingsPage({ state, run }: { state: StateView; run: Run }) {
             </Card.Content>
           </Card>
         )}
+
+        <AboutCard />
       </div>
     </div>
   );

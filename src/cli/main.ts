@@ -451,7 +451,7 @@ async function ui(p: Paths): Promise<void> {
   }
   if (other) throw new UserError(`${busy(other)}.`);
   // a free port; a second start finds this one through the note, so two servers never flash the same devices
-  const server = await startServer({ paths: p, port: 0, staticDir });
+  const server = await startServer({ paths: p, port: 0, staticDir, licensesFile: join(REPO_ROOT, 'dist', 'THIRD_PARTY_LICENSES.txt') });
   const forget = await noteRunning(p.server, { kind: 'browser', url: server.open });
   let stopping = false;
   const stop = () => {

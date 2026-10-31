@@ -165,7 +165,15 @@ async function start(): Promise<void> {
   }
   // only the installed app updates itself, not a start from the source folder
   const updates = app.isPackaged ? appUpdates() : undefined;
-  server = await startServer({ paths: p, port: 0, appUpdates: updates, desktop: true, staticDir: join(app.getAppPath(), 'dist', 'ui') });
+  server = await startServer({
+    paths: p,
+    port: 0,
+    appUpdates: updates,
+    desktop: true,
+    staticDir: join(app.getAppPath(), 'dist', 'ui'),
+    // packed: in the resources folder; started from the source: in dist/
+    licensesFile: app.isPackaged ? join(process.resourcesPath, 'THIRD_PARTY_LICENSES.txt') : join(app.getAppPath(), 'dist', 'THIRD_PARTY_LICENSES.txt'),
+  });
   // the browser interface and the terminal's watch and update find this server through the note
   forgetNote = await noteRunning(p.server, { kind: 'app', url: server.open });
   openWindow(server.url, server.open);

@@ -23,6 +23,7 @@ import {
   type FlashOutcome,
   type WatchState,
   type PrefsView,
+  type LicensesView,
   type StateView,
 } from './api.ts';
 
@@ -30,6 +31,7 @@ export interface ServerOptions {
   paths: Paths;
   port: number;
   staticDir?: string; // built interface; without it only /api is served (Vite serves the page)
+  licensesFile?: string; // THIRD_PARTY_LICENSES.txt from the build, shown under About
   watch?: WatchDeps;
   appUpdates?: AppUpdates; // desktop app only
   desktop?: boolean;
@@ -406,6 +408,11 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
       }
     },
 
+    'GET /api/licenses': async (): Promise<LicensesView> => {
+      const text = o.licensesFile ? await readFile(o.licensesFile, 'utf8').catch(() => undefined) : undefined;
+      if (text === undefined) throw new HttpError(404, 'licensesMissing', 'The list of open source licenses is missing. Build the app first with "npm run build".');
+      return { text };
+    },
     'POST /api/open-firmware-folder': async () => {
       await mkdir(p.firmware, { recursive: true });
       openFolder(p.firmware);

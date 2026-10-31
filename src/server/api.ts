@@ -114,6 +114,11 @@ export interface AppUpdateView {
   restarting?: boolean; // downloaded, the app is about to restart into it
 }
 
+// The open source licenses of the bundled packages, as the build wrote them.
+export interface LicensesView {
+  text: string;
+}
+
 export interface StateView {
   settings: { targetMajor?: number; autoUpdate: boolean; releaseCandidates: boolean; rememberWebFlasher: boolean };
   desktop: boolean; // runs in the desktop app's window
@@ -151,6 +156,7 @@ export type ErrorCode =
   | 'invalidMajor'
   | 'invalidRequest'
   | 'flashRunning'
+  | 'licensesMissing'
   | 'appUpdateFailed';
 
 // A key made for each start of the server: the page gets it, other web pages in the browser don't,

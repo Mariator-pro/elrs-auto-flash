@@ -29,7 +29,7 @@ afterEach(async () => {
 });
 
 // A server on a free port whose watcher sees `found` and flashes nothing for real.
-async function server(found: Device[], opts: { staticDir?: string; gone?: Set<string>; desktop?: boolean; appUpdates?: AppUpdates } = {}) {
+async function server(found: Device[], opts: { staticDir?: string; licensesFile?: string; gone?: Set<string>; desktop?: boolean; appUpdates?: AppUpdates } = {}) {
   const p = paths(await tempDir());
   await saveSettings(p, { autoUpdate: false, releaseCandidates: false, targetMajor: 4, ui: { lang: 'de' } });
   const flashed: string[] = [];
@@ -37,6 +37,7 @@ async function server(found: Device[], opts: { staticDir?: string; gone?: Set<st
     paths: p,
     port: 0,
     staticDir: opts.staticDir,
+    licensesFile: opts.licensesFile,
     desktop: opts.desktop,
     appUpdates: opts.appUpdates,
     watch: {
@@ -141,6 +142,14 @@ describe('server', () => {
     expect(await targets()).toMatchObject([{ to: '3.6.4' }]);
     await api('POST', '/api/settings', { targetMajor: null });
     expect((await loadSettings(p)).targetMajor).toBeUndefined();
+  });
+
+  it('sends the open source licenses from the build, or says they are missing', async () => {
+    const file = join(await tempDir(), 'THIRD_PARTY_LICENSES.txt');
+    const { api } = await server([], { licensesFile: file });
+    expect((await api('GET', '/api/licenses')).data).toMatchObject({ code: 'licensesMissing' });
+    await writeFile(file, 'THIRD-PARTY SOFTWARE NOTICES\n');
+    expect(await api('GET', '/api/licenses')).toEqual({ status: 200, data: { text: 'THIRD-PARTY SOFTWARE NOTICES\n' } });
   });
 
   it('gives a device its own name, shown with its Lua name', async () => {

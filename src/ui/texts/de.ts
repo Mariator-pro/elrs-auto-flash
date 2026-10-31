@@ -172,6 +172,18 @@ export const de: Texts = {
   webFlasherOfflineText: 'Prüfe die Internetverbindung.',
   reload: 'Neu laden',
 
+  about: 'Über die App',
+  version: (v) => `Version ${v}`,
+  license: 'Freie Software unter der MIT-Lizenz.',
+  thirdParty: 'Sie enthält Open-Source-Pakete unter ihren eigenen Lizenzen.',
+  showLicenses: 'Lizenzen anzeigen',
+  mitLicense: 'MIT-Lizenz',
+  sourceCode: 'Quellcode',
+  licensesTitle: 'Open-Source-Lizenzen',
+  licensesLoading: 'Lizenzen werden geladen …',
+  licensesIntro: (n) =>
+    `Die App enthält diese ${n} Open-Source-Pakete. Öffne eines, um seine Lizenz zu lesen. Electron und Chromium bringen eigene Lizenzdateien mit, sie liegen im Ordner der App.`,
+
   errors: {
     noTarget: 'Wähle zuerst eine Zielversion.',
     notFlashable: 'Dieses Gerät kann gerade nicht aktualisiert werden.',
@@ -180,6 +192,7 @@ export const de: Texts = {
     invalidMajor: 'Diese Hauptversion gibt es nicht.',
     invalidRequest: 'Die Anfrage konnte nicht verarbeitet werden. Lade die Seite neu und versuche es noch einmal.',
     flashRunning: 'Gerade wird ein Gerät aktualisiert. Aktualisiere die App, wenn es fertig ist.',
+    licensesMissing: 'Die Liste der Open-Source-Lizenzen fehlt. Baue die App zuerst mit „npm run build“.',
     appUpdateFailed: 'Das App-Update konnte nicht heruntergeladen werden. Prüfe die Internetverbindung und versuche es noch einmal.',
   },
   messages: {

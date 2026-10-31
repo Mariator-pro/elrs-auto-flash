@@ -176,6 +176,18 @@ const en = {
   webFlasherOfflineText: 'Check your internet connection.',
   reload: 'Reload',
 
+  about: 'About',
+  version: (v: string) => `Version ${v}`,
+  license: 'Free software under the MIT license.',
+  thirdParty: 'It contains open source packages under their own licenses.',
+  showLicenses: 'Show licenses',
+  mitLicense: 'MIT license',
+  sourceCode: 'Source code',
+  licensesTitle: 'Open source licenses',
+  licensesLoading: 'Loading licenses …',
+  licensesIntro: (n: number) =>
+    `The app contains these ${n} open source packages. Open one to read its license. Electron and Chromium bring their own license files, which are in the app’s folder.`,
+
   errors: {
     noTarget: 'Choose a target version first.',
     notFlashable: 'This device can’t be updated right now.',
@@ -184,6 +196,7 @@ const en = {
     invalidMajor: 'This major version doesn’t exist.',
     invalidRequest: 'The request couldn’t be processed. Reload the page and try again.',
     flashRunning: 'A device is updating right now. Update the app once it’s done.',
+    licensesMissing: 'The list of open source licenses is missing. Build the app first with “npm run build”.',
     appUpdateFailed: 'Couldn’t download the app update. Check your internet connection and try again.',
   } satisfies Record<ErrorCode, string>,
   messages: {} as Partial<Record<MessageCode, (p: MessageParams) => string>>,

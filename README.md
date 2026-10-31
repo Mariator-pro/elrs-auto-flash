@@ -115,6 +115,7 @@ In the app:
 - **Release candidates**: devices also get release candidates, the test versions before a new version comes out. They can have bugs; turning this off later doesn't take any device back to an older version.
 - **Firmware archives**: the firmware of each version is downloaded once (about 30 MB) and kept on the computer; archives of versions no longer needed are removed. "Open folder" shows them.
 - **Remember Web Flasher entries**: see [Web Flasher](#6-web-flasher).
+- **About**: the version, a link to the app's MIT license and its source code, and "Show licenses" with the licenses of all open source packages inside the app.
 
 "Check for updates" at the bottom of the sidebar asks GitHub for new ExpressLRS versions right away; otherwise the app does this by itself every 6 hours. Appearance (light or dark) and language are chosen there as well.
 
@@ -136,4 +137,4 @@ You do not need any of this to use the app. It is for those who want to go furth
 
 ## License
 
-Released under the [MIT License](LICENSE). The app bundles open source packages under their own licenses, listed in `THIRD_PARTY_LICENSES.txt` in the app's resources folder. Electron's own license files (`LICENSE.electron.txt`, `LICENSES.chromium.html`) are in the same folder on macOS and in the app folder on Windows and Linux.
+Released under the [MIT License](LICENSE). The app bundles open source packages under their own licenses, listed under Settings, About, "Show licenses" and in `THIRD_PARTY_LICENSES.txt` in the app's resources folder. Electron's own license files (`LICENSE.electron.txt`, `LICENSES.chromium.html`) are in the same folder on macOS and in the app folder on Windows and Linux.
