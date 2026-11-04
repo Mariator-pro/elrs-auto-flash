@@ -1,6 +1,7 @@
 {
   "name": "elrs-auto-flash",
   "productName": "ELRS Auto Flash",
+  "desktopName": "elrs-auto-flash.desktop",
   "private": true,
   "version": "0.1.4",
   "description": "Find ExpressLRS receivers and transmitter modules on the home WiFi and keep their firmware up to date",
@@ -125,6 +126,7 @@
         }
       ],
       "category": "Utility",
+      "syncDesktopName": true,
       "artifactName": "elrs-auto-flash-linux-v${version}.${ext}"
     },
     "nsis": {
