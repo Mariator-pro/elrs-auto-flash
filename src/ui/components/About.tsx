@@ -14,25 +14,25 @@ export function AboutCard() {
   const [open, setOpen] = useState(false);
   return (
     <Card>
-      <Card.Content className="flex flex-col gap-3">
-        <h2 className="m-0 text-base font-semibold">{t.about}</h2>
-        <p className="m-0 text-sm leading-relaxed text-muted">
+      <Card.Header>
+        <Card.Title>{t.about}</Card.Title>
+        <Card.Description>
           ELRS Auto Flash · {t.version(__APP_VERSION__)}
           <br />
           {t.license} {t.thirdParty}
-        </p>
-        <div className="mt-auto flex flex-wrap items-center gap-4">
-          <Button variant="outline" onPress={() => setOpen(true)}>
-            {t.showLicenses}
-          </Button>
-          <a href={`${REPO}/blob/main/LICENSE`} target="_blank" rel="noreferrer" className={linkClass}>
-            {t.mitLicense}
-          </a>
-          <a href={REPO} target="_blank" rel="noreferrer" className={linkClass}>
-            {t.sourceCode}
-          </a>
-        </div>
-      </Card.Content>
+        </Card.Description>
+      </Card.Header>
+      <Card.Footer className="flex flex-wrap items-center gap-4">
+        <Button variant="outline" onPress={() => setOpen(true)}>
+          {t.showLicenses}
+        </Button>
+        <a href={`${REPO}/blob/main/LICENSE`} target="_blank" rel="noreferrer" className={linkClass}>
+          {t.mitLicense}
+        </a>
+        <a href={REPO} target="_blank" rel="noreferrer" className={linkClass}>
+          {t.sourceCode}
+        </a>
+      </Card.Footer>
       {open && <LicensesDialog onClose={() => setOpen(false)} />}
     </Card>
   );
