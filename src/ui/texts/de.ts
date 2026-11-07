@@ -45,7 +45,7 @@ export const de: Texts = {
   appUpdateAvailable: (v) => `ELRS Auto Flash ${v} ist verfügbar`,
   appDownloading: (pct) => `Update wird geladen … ${pct} %`,
   appRestarting: 'Startet neu …',
-  appUpdateInstall: 'Aktualisieren und neu starten',
+  appUpdateInstall: 'Aktualisieren',
   appUpdateDownload: 'Herunterladen',
 
   noServer: 'ELRS Auto Flash ist nicht erreichbar',

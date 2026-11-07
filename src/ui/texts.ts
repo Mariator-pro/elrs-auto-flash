@@ -47,7 +47,7 @@ const en = {
   appUpdateAvailable: (v: string) => `ELRS Auto Flash ${v} is available`,
   appDownloading: (pct: number) => `Downloading the update … ${pct} %`,
   appRestarting: 'Restarting …',
-  appUpdateInstall: 'Update and restart',
+  appUpdateInstall: 'Update',
   appUpdateDownload: 'Download',
 
   noServer: 'Can’t reach ELRS Auto Flash',
