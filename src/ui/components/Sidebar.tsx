@@ -3,9 +3,19 @@ import type { StateView } from '../../server/api.ts';
 import { dateTime } from '../format.ts';
 import { LANGUAGES, type Lang } from '../texts.ts';
 import { usePrefs, type Theme } from '../usePrefs.ts';
-import { ActivityIcon, AntennaIcon, DevicesIcon, MoonIcon, PlugIcon, RefreshIcon, SettingsIcon, SunIcon } from './icons.tsx';
+import { ActivityIcon, AntennaIcon, BoltIcon, DevicesIcon, MoonIcon, PlugIcon, RefreshIcon, SettingsIcon, SunIcon } from './icons.tsx';
 
 export type Page = 'devices' | 'activity' | 'settings' | 'web-flasher';
+
+// Pulses like the dot of the search, so it's clear that updates start without a click.
+function ActiveBolt() {
+  return (
+    <span className="relative inline-flex size-4 text-amber-400">
+      <BoltIcon size={16} className="absolute inset-0 fill-current opacity-75 motion-safe:animate-ping" />
+      <BoltIcon size={16} className="relative fill-current" />
+    </span>
+  );
+}
 
 export function Sidebar(props: {
   state?: StateView;
@@ -71,21 +81,31 @@ export function Sidebar(props: {
       )}
 
       <div className="flex flex-col gap-2.5 rounded-xl bg-zinc-800 p-3.5">
-        {/* the default track colour is nearly white here, which hides the white thumb */}
-        <Switch
-          size="lg"
-          isSelected={!!s?.autoUpdate}
-          isDisabled={!s}
-          onChange={onAutoUpdate}
-          className="[--switch-control-bg:var(--color-zinc-600)]"
-        >
-          <Switch.Content className="w-full justify-between">
-            <span className="font-semibold text-white">{t.autoUpdate}</span>
-            <Switch.Control>
-              <Switch.Thumb />
-            </Switch.Control>
-          </Switch.Content>
-        </Switch>
+        {s?.alwaysAutoUpdate ? (
+          <span className="flex items-center gap-2">
+            <ActiveBolt />
+            <span className="text-sm font-semibold text-white">{t.autoActive}</span>
+          </span>
+        ) : (
+          // the default track colour is nearly white here, which hides the white thumb
+          <Switch
+            size="lg"
+            isSelected={!!s?.autoUpdate}
+            isDisabled={!s}
+            onChange={onAutoUpdate}
+            className="[--switch-control-bg:var(--color-zinc-600)]"
+          >
+            <Switch.Content className="w-full justify-between">
+              <span className="flex items-center gap-2">
+                {s?.autoUpdate && <ActiveBolt />}
+                <span className="text-sm font-semibold text-white">{t.autoUpdate}</span>
+              </span>
+              <Switch.Control>
+                <Switch.Thumb />
+              </Switch.Control>
+            </Switch.Content>
+          </Switch>
+        )}
         <span className="text-xs leading-relaxed text-zinc-300">{s?.autoUpdate ? t.autoOn : t.autoOff}</span>
       </div>
 

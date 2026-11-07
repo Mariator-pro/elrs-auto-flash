@@ -88,7 +88,9 @@ The "Auto update" switch at the top of the sidebar decides whether updates start
 - **On**: every device with an update is updated as soon as it shows up, one at a time. A failed upload is tried again after about a minute, at most 3 times per version.
 - **Off** (the default): you start each update yourself with "Update to …" on the device.
 
-Custom builds, devices newer than the target version and devices without a target version are never updated by auto update. Auto update only runs while the app is open. Closing the window quits the app; while a device is updating it asks first (a device cut off keeps its old firmware and gets the update next time).
+When you turn it on, the app first shows what auto update does and which settings stay as they are. Tick "Don't show this again" to skip this next time; "Warning" under "Auto update" in the settings brings it back.
+
+Custom builds, devices newer than the target version and devices without a target version are never updated by auto update. Auto update only runs while the app is open, and it's off again each time the app starts, so opening the app doesn't start an update by itself. To change that, turn on "Always on" under "Auto update" in the settings: auto update then stays on and its switch leaves the sidebar. Closing the window quits the app; while a device is updating it asks first (a device cut off keeps its old firmware and gets the update next time).
 
 ### 5. Activity
 

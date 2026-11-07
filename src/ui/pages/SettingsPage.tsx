@@ -7,10 +7,30 @@ import { usePrefs } from '../usePrefs.ts';
 
 type Run = (fn: () => Promise<unknown>) => void;
 
-export function SettingsPage({ state, run }: { state: StateView; run: Run }) {
+// One of several switches in a card, with its own label and text.
+function SwitchRow(props: { group: string; label: string; text: string; isSelected: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <div className="flex items-start gap-3">
+      <Switch aria-label={`${props.group}: ${props.label}`} isSelected={props.isSelected} onChange={props.onChange}>
+        <Switch.Content>
+          <Switch.Control>
+            <Switch.Thumb />
+          </Switch.Control>
+        </Switch.Content>
+      </Switch>
+      <div className="flex min-w-0 flex-col text-sm leading-relaxed">
+        <span className="font-medium">{props.label}</span>
+        <span className="text-muted">{props.text}</span>
+      </div>
+    </div>
+  );
+}
+
+export function SettingsPage({ state, run, onAlwaysAutoUpdate }: { state: StateView; run: Run; onAlwaysAutoUpdate: (on: boolean) => void }) {
   const { t } = usePrefs();
   const s = state.settings;
-  const save = (change: { targetMajor?: number | null; releaseCandidates?: boolean; rememberWebFlasher?: boolean }) => run(() => post('/api/settings', change));
+  const save = (change: { targetMajor?: number | null; hideAutoUpdateWarning?: boolean; releaseCandidates?: boolean; rememberWebFlasher?: boolean }) =>
+    run(() => post('/api/settings', change));
   return (
     <div className="flex flex-col gap-6">
       <h1 className="m-0 text-3xl font-bold tracking-tight">{t.settings}</h1>
@@ -72,6 +92,22 @@ export function SettingsPage({ state, run }: { state: StateView; run: Run }) {
             </Switch.Content>
           </Switch>
         </Card.Footer>
+      </Card>
+
+      <Card>
+        <Card.Header>
+          <Card.Title>{t.autoUpdate}</Card.Title>
+        </Card.Header>
+        <Card.Content className="flex flex-col gap-4">
+          <SwitchRow group={t.autoUpdate} label={t.autoAlways} text={t.autoAlwaysText} isSelected={s.alwaysAutoUpdate} onChange={onAlwaysAutoUpdate} />
+          <SwitchRow
+            group={t.autoUpdate}
+            label={t.autoWarning}
+            text={t.autoWarningText}
+            isSelected={!s.hideAutoUpdateWarning}
+            onChange={(on) => save({ hideAutoUpdateWarning: !on })}
+          />
+        </Card.Content>
       </Card>
 
       <Card>

@@ -2,7 +2,9 @@ import { readJson, writeJson, type Paths } from './paths.ts';
 
 export interface Settings {
   targetMajor?: number; // major version all devices are kept on; unset: nothing is flashed
-  autoUpdate: boolean;
+  autoUpdate: boolean; // terminal: what watch does; the interface has its own switch
+  alwaysAutoUpdate?: boolean; // interface: auto update is on at every start, without its switch
+  hideAutoUpdateWarning?: boolean; // interface: don't ask again before auto update goes on
   releaseCandidates: boolean;
   rememberWebFlasher?: boolean; // desktop app: keep what was typed into the Web Flasher after quitting
   ui?: { lang?: string; theme?: 'light' | 'dark' }; // kept for the interface, whose port changes with every start

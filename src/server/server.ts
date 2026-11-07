@@ -173,6 +173,9 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
   const activity: ActivityEntry[] = [];
   const clients = new Set<ServerResponse>();
   let settings: Settings = await loadSettings(p);
+  // The interface's own switch, for this run only: opening it doesn't start an update unless auto update
+  // is set to be always on. The saved value belongs to the terminal's settings and watch.
+  let autoUpdate = !!settings.alwaysAutoUpdate;
   let releases: ReleaseList | undefined;
   let target: VersionedRelease | undefined;
   let problems: StateView['problems'] = {};
@@ -193,7 +196,9 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
     return {
       settings: {
         targetMajor: settings.targetMajor,
-        autoUpdate: settings.autoUpdate,
+        autoUpdate,
+        alwaysAutoUpdate: !!settings.alwaysAutoUpdate,
+        hideAutoUpdateWarning: !!settings.hideAutoUpdateWarning,
         releaseCandidates: settings.releaseCandidates,
         rememberWebFlasher: !!settings.rememberWebFlasher,
       },
@@ -301,7 +306,7 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
     pushState();
   };
 
-  const watcher = createWatcher(p, onEvent, o.watch);
+  const watcher = createWatcher(p, onEvent, { ...o.watch, autoUpdate: () => autoUpdate });
   o.appUpdates?.onChange(pushState);
 
   const device = (key: unknown): DeviceView => {
@@ -315,9 +320,15 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
     'GET /api/activity': async () => activity,
 
     'POST /api/settings': async (req) => {
-      const b = await body<{ targetMajor: number | null; autoUpdate: boolean; releaseCandidates: boolean; rememberWebFlasher: boolean }>(req);
+      const b = await body<{ targetMajor: number | null; autoUpdate: boolean; alwaysAutoUpdate: boolean; hideAutoUpdateWarning: boolean; releaseCandidates: boolean; rememberWebFlasher: boolean }>(req);
       const s = await loadSettings(p);
-      if (typeof b.autoUpdate === 'boolean') s.autoUpdate = b.autoUpdate;
+      if (typeof b.autoUpdate === 'boolean') autoUpdate = b.autoUpdate;
+      // always on takes auto update with it both ways: without its switch nothing else could turn it off
+      if (typeof b.alwaysAutoUpdate === 'boolean') {
+        s.alwaysAutoUpdate = b.alwaysAutoUpdate;
+        autoUpdate = b.alwaysAutoUpdate;
+      }
+      if (typeof b.hideAutoUpdateWarning === 'boolean') s.hideAutoUpdateWarning = b.hideAutoUpdateWarning;
       if (typeof b.releaseCandidates === 'boolean') s.releaseCandidates = b.releaseCandidates;
       if (typeof b.rememberWebFlasher === 'boolean') s.rememberWebFlasher = b.rememberWebFlasher;
       if (b.targetMajor === null) delete s.targetMajor;

@@ -1,6 +1,7 @@
 import { Alert, CloseButton, Spinner } from '@heroui/react';
 import { useState } from 'react';
 import { errorText, post, useServer } from './api.ts';
+import { AutoUpdateDialog } from './components/AutoUpdateDialog.tsx';
 import { Sidebar, type Page } from './components/Sidebar.tsx';
 import { ActivityPage } from './pages/ActivityPage.tsx';
 import { DevicesPage } from './pages/DevicesPage.tsx';
@@ -14,6 +15,7 @@ export function App() {
   const [page, setPage] = useState<Page>('devices');
   const [flasherOpened, setFlasherOpened] = useState(false);
   const [error, setError] = useState<string>();
+  const [askAutoUpdate, setAskAutoUpdate] = useState<'now' | 'always'>();
 
   const navigate = (target: Page) => {
     if (target === 'web-flasher') setFlasherOpened(true);
@@ -31,7 +33,10 @@ export function App() {
         state={state}
         page={page}
         onNavigate={navigate}
-        onAutoUpdate={(autoUpdate) => run(() => post('/api/settings', { autoUpdate }))}
+        onAutoUpdate={(autoUpdate) => {
+          if (autoUpdate && !state?.settings.hideAutoUpdateWarning) setAskAutoUpdate('now');
+          else run(() => post('/api/settings', { autoUpdate }));
+        }}
         onCheck={() => run(() => post('/api/check'))}
         onAppUpdate={() => run(() => post('/api/app-update'))}
       />
@@ -62,11 +67,29 @@ export function App() {
         ) : page === 'activity' ? (
           <ActivityPage activity={activity} />
         ) : page === 'settings' ? (
-          <SettingsPage state={state} run={run} />
+          <SettingsPage
+            state={state}
+            run={run}
+            onAlwaysAutoUpdate={(alwaysAutoUpdate) => {
+              if (alwaysAutoUpdate && !state.settings.hideAutoUpdateWarning) setAskAutoUpdate('always');
+              else run(() => post('/api/settings', { alwaysAutoUpdate }));
+            }}
+          />
         ) : (
           <DevicesPage state={state} run={run} onSettings={() => setPage('settings')} />
         )}
       </main>
+      {askAutoUpdate && (
+        <AutoUpdateDialog
+          always={askAutoUpdate === 'always'}
+          onClose={() => setAskAutoUpdate(undefined)}
+          onConfirm={(hideAutoUpdateWarning) => {
+            const change = askAutoUpdate === 'always' ? { alwaysAutoUpdate: true } : { autoUpdate: true };
+            setAskAutoUpdate(undefined);
+            run(() => post('/api/settings', { ...change, hideAutoUpdateWarning }));
+          }}
+        />
+      )}
     </div>
   );
 }

@@ -34,6 +34,7 @@ export interface WatchDeps {
   prepare?: (ip: string, tag: string, onDownload: (done: number, total: number) => void, manual: boolean) => Promise<FlashPlan>;
   run?: (plan: FlashPlan, onStep: (step: 'upload' | 'reboot') => void) => Promise<FlashResult>;
   now?: () => number;
+  autoUpdate?: () => boolean; // the interface's own switch; without it, the saved setting decides
   tickMs?: number; // how often found devices are taken in and the queue is looked at
   scanEveryMs?: number; // how often the networks are scanned and the releases looked at
   offlineAfterMs?: number; // not seen for this long: off the network
@@ -223,7 +224,7 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
       // by hand: an update, or an own build (its button is the one way to flash it)
       const byHand = requested.get(d.key) === state;
       if (requested.has(d.key) && (!byHand || !online) && flashing?.key !== d.key) requested.delete(d.key);
-      const auto = state === 'update' && settings.autoUpdate && (retryAt.get(d.key) ?? 0) <= t;
+      const auto = state === 'update' && (deps.autoUpdate?.() ?? settings.autoUpdate) && (retryAt.get(d.key) ?? 0) <= t;
       const wanted = online && !!target && (auto || byHand);
       const at = queue.indexOf(d.key);
       if (wanted && at < 0) queue.push(d.key);

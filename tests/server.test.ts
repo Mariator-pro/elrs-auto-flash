@@ -29,9 +29,9 @@ afterEach(async () => {
 });
 
 // A server on a free port whose watcher sees `found` and flashes nothing for real.
-async function server(found: Device[], opts: { staticDir?: string; licensesFile?: string; gone?: Set<string>; desktop?: boolean; appUpdates?: AppUpdates } = {}) {
+async function server(found: Device[], opts: { staticDir?: string; licensesFile?: string; gone?: Set<string>; desktop?: boolean; appUpdates?: AppUpdates; autoUpdate?: boolean; alwaysAutoUpdate?: boolean } = {}) {
   const p = paths(await tempDir());
-  await saveSettings(p, { autoUpdate: false, releaseCandidates: false, targetMajor: 4, ui: { lang: 'de' } });
+  await saveSettings(p, { autoUpdate: !!opts.autoUpdate, alwaysAutoUpdate: opts.alwaysAutoUpdate, releaseCandidates: false, targetMajor: 4, ui: { lang: 'de' } });
   const flashed: string[] = [];
   const s = await startServer({
     paths: p,
@@ -86,6 +86,33 @@ describe('server', () => {
     expect((await api('GET', '/api/state')).status).toBe(200);
   });
 
+  it('starts with auto update off, whatever the terminal saved, and updates nothing until it is turned on', async () => {
+    const { api, p, until, flashed } = await server([rx('0A', '4.0.1')], { autoUpdate: true });
+    const st = await until((x) => x.devices[0]?.state === 'update');
+    expect(st.settings.autoUpdate).toBe(false);
+    await new Promise((r) => setTimeout(r, 100)); // several rounds of the watcher
+    expect(flashed).toEqual([]);
+    await api('POST', '/api/settings', { autoUpdate: true });
+    await until((x) => x.devices[0]?.state === 'current');
+    expect(flashed).toEqual(['192.168.1.10']);
+    // the terminal's value stays as it was, whatever the switch does
+    await api('POST', '/api/settings', { autoUpdate: false });
+    expect((await loadSettings(p)).autoUpdate).toBe(true);
+  });
+
+  it('starts with auto update on when it is always on, and turning that off turns auto update off', async () => {
+    const { api, p, until, flashed } = await server([rx('0A', '4.0.1')], { alwaysAutoUpdate: true });
+    const st = await until((x) => x.devices[0]?.state === 'current');
+    expect(st.settings).toMatchObject({ autoUpdate: true, alwaysAutoUpdate: true });
+    expect(flashed).toEqual(['192.168.1.10']);
+    await api('POST', '/api/settings', { alwaysAutoUpdate: false });
+    expect((await api<StateView>('GET', '/api/state')).data.settings).toMatchObject({ autoUpdate: false, alwaysAutoUpdate: false });
+    await api('POST', '/api/settings', { alwaysAutoUpdate: true });
+    expect((await api<StateView>('GET', '/api/state')).data.settings).toMatchObject({ autoUpdate: true, alwaysAutoUpdate: true });
+    // only the interface's setting is saved, the terminal's value stays
+    expect(await loadSettings(p)).toMatchObject({ autoUpdate: false, alwaysAutoUpdate: true });
+  });
+
   it('shows found devices with their state, the target version and the major versions to choose from', async () => {
     const { until } = await server([rx('0A', '4.0.1')]);
     const st = await until((x) => x.devices.length === 1);
@@ -135,13 +162,20 @@ describe('server', () => {
     expect((await api('POST', '/api/settings', { targetMajor: 9 })).data).toMatchObject({ code: 'invalidMajor' });
     expect((await api('POST', '/api/settings', { autoUpdate: true, targetMajor: 3 })).status).toBe(200);
     await api('POST', '/api/prefs', { theme: 'dark', lang: 'not a language' });
-    expect(await loadSettings(p)).toMatchObject({ autoUpdate: true, targetMajor: 3, ui: { lang: 'de', theme: 'dark' } });
+    expect(await loadSettings(p)).toMatchObject({ targetMajor: 3, ui: { lang: 'de', theme: 'dark' } });
     await until((x) => x.target === '3.6.4');
     // a new target version gets its own line, the first one at the start does not
     const targets = async () => (await api<ActivityEntry[]>('GET', '/api/activity')).data.filter((a) => a.type === 'target');
     expect(await targets()).toMatchObject([{ to: '3.6.4' }]);
     await api('POST', '/api/settings', { targetMajor: null });
     expect((await loadSettings(p)).targetMajor).toBeUndefined();
+    // the warning before auto update stays on until it is turned off, also over a restart
+    expect((await api<StateView>('GET', '/api/state')).data.settings.hideAutoUpdateWarning).toBe(false);
+    await api('POST', '/api/settings', { hideAutoUpdateWarning: true });
+    expect((await loadSettings(p)).hideAutoUpdateWarning).toBe(true);
+    await until((x) => x.settings.hideAutoUpdateWarning);
+    await api('POST', '/api/settings', { hideAutoUpdateWarning: false });
+    expect((await loadSettings(p)).hideAutoUpdateWarning).toBe(false);
   });
 
   it('sends the open source licenses from the build, or says they are missing', async () => {

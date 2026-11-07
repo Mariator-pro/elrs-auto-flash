@@ -120,7 +120,7 @@ export interface LicensesView {
 }
 
 export interface StateView {
-  settings: { targetMajor?: number; autoUpdate: boolean; releaseCandidates: boolean; rememberWebFlasher: boolean };
+  settings: { targetMajor?: number; autoUpdate: boolean; alwaysAutoUpdate: boolean; hideAutoUpdateWarning: boolean; releaseCandidates: boolean; rememberWebFlasher: boolean };
   desktop: boolean; // runs in the desktop app's window
   appUpdate?: AppUpdateView;
   target?: string; // the version devices are brought to
