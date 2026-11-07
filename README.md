@@ -1,6 +1,6 @@
-![ELRS Auto Flash: ExpressLRS firmware updates over WiFi](docs/banner.png)
-
 # ELRS Auto Flash
+
+![ELRS Auto Flash: ExpressLRS firmware updates over WiFi](docs/banner.png)
 
 Keep your ExpressLRS receivers and transmitter modules up to date without updating each one by hand. Devices that join your home WiFi are found automatically and updated to the current firmware over the network, keeping their binding phrase, regulatory domain and WiFi settings.
 
