@@ -45,6 +45,7 @@ export function SettingsPage({ state, run, onAlwaysAutoUpdate }: { state: StateV
             <p className="m-0 text-sm">{t.noReleases}</p>
           ) : (
             <Select
+              variant="secondary"
               aria-label={t.targetMajor}
               className="w-80 max-w-full"
               selectedKey={s.targetMajor === undefined ? 'none' : String(s.targetMajor)}
@@ -54,7 +55,7 @@ export function SettingsPage({ state, run, onAlwaysAutoUpdate }: { state: StateV
                 <Select.Value />
                 <Select.Indicator />
               </Select.Trigger>
-              <Select.Popover>
+              <Select.Popover className="field-list">
                 <ListBox>
                   <ListBox.Item id="none" textValue={t.none}>
                     {t.none}
