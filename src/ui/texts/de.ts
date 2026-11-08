@@ -51,7 +51,6 @@ export const de: Texts = {
   noServer: 'ELRS Auto Flash ist nicht erreichbar',
   startServer: 'Starte es im Terminal mit „npm start“.',
   failed: 'Das hat nicht funktioniert',
-  close: 'Schließen',
 
   looking: 'Suche nach Geräten',
   scannedAt: (t) => `letzte Suche ${t}`,

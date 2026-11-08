@@ -1,10 +1,11 @@
-import { Alert, CloseButton, Spinner } from '@heroui/react';
+import { Alert, Spinner, Toast } from '@heroui/react';
 import { useState } from 'react';
 import { errorText, post, useServer } from './api.ts';
 import { AutoUpdateDialog } from './components/AutoUpdateDialog.tsx';
 import { Sidebar, type Page } from './components/Sidebar.tsx';
 import { ActivityPage } from './pages/ActivityPage.tsx';
 import { DevicesPage } from './pages/DevicesPage.tsx';
+import { notify } from './notify.ts';
 import { SettingsPage } from './pages/SettingsPage.tsx';
 import { WebFlasherPage } from './pages/WebFlasherPage.tsx';
 import { usePrefs } from './usePrefs.ts';
@@ -14,7 +15,6 @@ export function App() {
   const { t } = usePrefs();
   const [page, setPage] = useState<Page>('devices');
   const [flasherOpened, setFlasherOpened] = useState(false);
-  const [error, setError] = useState<string>();
   const [askAutoUpdate, setAskAutoUpdate] = useState<'now' | 'always'>();
 
   const navigate = (target: Page) => {
@@ -23,12 +23,12 @@ export function App() {
   };
 
   const run = (fn: () => Promise<unknown>) => {
-    setError(undefined);
-    fn().catch((e: unknown) => setError(errorText(t, e)));
+    fn().catch((e: unknown) => notify({ status: 'danger', title: t.failed, text: errorText(t, e) }));
   };
 
   return (
     <div className="flex min-h-screen flex-wrap">
+      <Toast.Provider />
       <Sidebar
         state={state}
         page={page}
@@ -48,16 +48,6 @@ export function App() {
               <Alert.Title>{t.noServer}</Alert.Title>
               <Alert.Description>{t.startServer}</Alert.Description>
             </Alert.Content>
-          </Alert>
-        )}
-        {error && (
-          <Alert status="danger">
-            <Alert.Indicator />
-            <Alert.Content>
-              <Alert.Title>{t.failed}</Alert.Title>
-              <Alert.Description>{error}</Alert.Description>
-            </Alert.Content>
-            <CloseButton aria-label={t.close} onPress={() => setError(undefined)} />
           </Alert>
         )}
         {/* outside the switch below, so it stays loaded while another page is shown */}

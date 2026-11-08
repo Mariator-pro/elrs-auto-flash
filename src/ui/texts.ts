@@ -53,7 +53,6 @@ const en = {
   noServer: 'Can’t reach ELRS Auto Flash',
   startServer: 'Start it in the terminal with “npm start”.',
   failed: 'That didn’t work',
-  close: 'Close',
 
   looking: 'Looking for devices',
   scannedAt: (t: string) => `last search ${t}`,
