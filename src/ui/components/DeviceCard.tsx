@@ -88,7 +88,7 @@ export function DeviceCard(props: {
             <Button size="sm" type="submit">
               {t.save}
             </Button>
-            <Button size="sm" variant="ghost" onPress={() => setEditing(undefined)}>
+            <Button size="sm" variant="tertiary" onPress={() => setEditing(undefined)}>
               {t.cancel}
             </Button>
           </form>
@@ -154,7 +154,7 @@ export function DeviceCard(props: {
             </Button>
           )}
           {!d.online && d.state !== 'flashing' && (
-            <Button variant="ghost" className="self-start" onPress={onForget}>
+            <Button variant="danger-soft" className="self-start" onPress={onForget}>
               {t.remove}
             </Button>
           )}

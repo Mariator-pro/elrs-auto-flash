@@ -34,7 +34,7 @@ export function AutoUpdateDialog({ always, onConfirm, onClose }: { always: boole
             </Checkbox>
           </Modal.Body>
           <Modal.Footer>
-            <Button variant="outline" onPress={onClose}>
+            <Button variant="tertiary" onPress={onClose}>
               {t.cancel}
             </Button>
             <Button variant="primary" onPress={() => onConfirm(hide)}>
