@@ -38,7 +38,7 @@ export function DeviceCard(props: {
   const newer = target && (d.state === 'update' || d.state === 'queued' || d.state === 'flashing' || d.state === 'unconfirmed');
   const address = [d.ip, d.mac].filter(Boolean).join(' · ');
   return (
-    <Card className={d.online ? undefined : 'opacity-70'}>
+    <Card className={d.online ? 'search-hit' : 'opacity-70'}>
       <Card.Content className="flex h-full flex-col gap-3.5">
         <div className="flex items-start justify-between gap-2.5">
           <div className="flex min-w-0 flex-col gap-1">

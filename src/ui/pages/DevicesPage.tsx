@@ -2,6 +2,7 @@ import { Alert, Button } from '@heroui/react';
 import type { DeviceView, StateView, WatchState } from '../../server/api.ts';
 import { post } from '../api.ts';
 import { DeviceCard } from '../components/DeviceCard.tsx';
+import { SearchBackground } from '../components/SearchBackground.tsx';
 import { message, sentence, time } from '../format.ts';
 import { usePrefs } from '../usePrefs.ts';
 
@@ -25,7 +26,9 @@ const sorted = (list: DeviceView[]) =>
   [...list].sort((a, b) => ORDER.indexOf(a.state) - ORDER.indexOf(b.state) || (a.product ?? a.ip).localeCompare(b.product ?? b.ip));
 
 export function DevicesPage({ state, run, onSettings }: { state: StateView; run: Run; onSettings: () => void }) {
-  const { t } = usePrefs();
+  const { t, search } = usePrefs();
+  // no search while macOS blocks the local network, so nothing moves then
+  const searching = !state.problems.blocked && search !== 'off';
   const online = sorted(state.devices.filter((d) => d.online));
   const away = sorted(state.devices.filter((d) => !d.online));
   const noticed = state.devices.filter((d) => d.notice);
@@ -43,12 +46,13 @@ export function DevicesPage({ state, run, onSettings }: { state: StateView; run:
     />
   );
   return (
-    <div className="flex flex-col gap-6">
+    <div className="flex flex-col gap-6" data-search={searching ? '' : undefined}>
+      {searching && <SearchBackground look={search} />}
       <div className="flex flex-wrap items-end justify-between gap-3">
         <h1 className="m-0 text-3xl font-bold tracking-tight">{t.devices}</h1>
         <span className="inline-flex items-center gap-2 text-sm text-muted">
           {/* a ring runs out of the dot while the search goes on, which it always does; none with reduced motion */}
-          <span className="relative flex size-2" aria-hidden="true">
+          <span className="relative flex size-2" aria-hidden="true" data-search-origin>
             <span className="absolute inline-flex size-full rounded-full bg-success opacity-75 motion-safe:animate-ping" />
             <span className="relative inline-flex size-2 rounded-full bg-success" />
           </span>

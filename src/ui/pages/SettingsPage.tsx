@@ -1,5 +1,5 @@
-import { Button, Card, ListBox, Select, Switch } from '@heroui/react';
-import type { StateView } from '../../server/api.ts';
+import { Button, Card, ListBox, Select, Switch, ToggleButton, ToggleButtonGroup } from '@heroui/react';
+import { SEARCH_LOOKS, type SearchLook, type StateView } from '../../server/api.ts';
 import { post } from '../api.ts';
 import { AboutCard } from '../components/About.tsx';
 import { FolderIcon } from '../components/icons.tsx';
@@ -27,7 +27,7 @@ function SwitchRow(props: { group: string; label: string; text: string; isSelect
 }
 
 export function SettingsPage({ state, run, onAlwaysAutoUpdate }: { state: StateView; run: Run; onAlwaysAutoUpdate: (on: boolean) => void }) {
-  const { t } = usePrefs();
+  const { t, search, setSearch } = usePrefs();
   const s = state.settings;
   const save = (change: { targetMajor?: number | null; hideAutoUpdateWarning?: boolean; releaseCandidates?: boolean; rememberWebFlasher?: boolean }) =>
     run(() => post('/api/settings', change));
@@ -149,6 +149,31 @@ export function SettingsPage({ state, run, onAlwaysAutoUpdate }: { state: StateV
           </Card.Footer>
         </Card>
       )}
+
+      <Card>
+        <Card.Header>
+          <Card.Title>{t.searchLook}</Card.Title>
+          <Card.Description>{t.searchLookText}</Card.Description>
+        </Card.Header>
+        <Card.Footer>
+          <ToggleButtonGroup
+            aria-label={t.searchLook}
+            selectionMode="single"
+            disallowEmptySelection
+            selectedKeys={new Set([search])}
+            onSelectionChange={(keys) => {
+              const v = [...keys][0];
+              if (v) setSearch(String(v) as SearchLook);
+            }}
+          >
+            {SEARCH_LOOKS.map((l) => (
+              <ToggleButton key={l} id={l}>
+                {t.searchLooks[l]}
+              </ToggleButton>
+            ))}
+          </ToggleButtonGroup>
+        </Card.Footer>
+      </Card>
 
       <AboutCard />
     </div>

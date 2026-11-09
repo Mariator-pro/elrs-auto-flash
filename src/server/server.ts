@@ -13,6 +13,7 @@ import { createWatcher, type WatchDeps, type WatchEvent } from '../core/watch.ts
 import {
   deviceLabel,
   MAX_NAME,
+  SEARCH_LOOKS,
   TOKEN_HASH,
   TOKEN_HEADER,
   withPageData,
@@ -351,6 +352,7 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
       s.ui = { ...s.ui };
       if (typeof b.lang === 'string' && /^[a-z]{2}$/.test(b.lang)) s.ui.lang = b.lang;
       if (b.theme === 'light' || b.theme === 'dark') s.ui.theme = b.theme;
+      if (SEARCH_LOOKS.includes(b.search!)) s.ui.search = b.search;
       await saveSettings(p, s);
       settings = s;
     },

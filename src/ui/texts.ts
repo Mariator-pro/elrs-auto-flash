@@ -187,6 +187,9 @@ const en = {
   off: 'Off:',
   rememberWebFlasherOn: 'The app keeps the binding phrase and WiFi details on this computer, unencrypted.',
   rememberWebFlasherOff: 'The app deletes them when it quits.',
+  searchLook: 'Search animation',
+  searchLookText: 'Moves in the background of Devices while the app looks for devices on your home network. If you reduce motion on your computer, it stands still.',
+  searchLooks: { scan: 'Light band', waves: 'Radio waves', radar: 'Radar', off: 'Off' },
 
   webFlasherNote:
     'The ExpressLRS Web Flasher flashes any version with your own binding phrase and WiFi details, over a cable or as a file you upload over WiFi. Use it for new receivers, other settings or an older version. This app’s safety rules don’t apply here: you choose every setting yourself. It needs an internet connection.',

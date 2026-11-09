@@ -119,6 +119,7 @@ In the app:
 - **Release candidates**: devices also get release candidates, the test versions before a new version comes out. They can have bugs; turning this off later doesn't take any device back to an older version.
 - **Firmware archives**: the firmware of each version is downloaded once (about 30 MB) and kept on the computer; archives of versions no longer needed are removed. "Open folder" shows them.
 - **Remember Web Flasher entries**: see [Web Flasher](#6-web-flasher).
+- **Search animation**: what moves behind the Devices page while the app looks for devices: a light band (the default), radio waves, a radar, or nothing with "Off". A device's card lights up when the animation reaches it. With reduced motion turned on in your system, it stands still.
 - **About**: the version, a link to the app's MIT license and its source code, and "Show licenses" with the licenses of all open source packages inside the app.
 
 "Check for updates" at the bottom of the sidebar asks GitHub for new ExpressLRS versions right away; otherwise the app does this by itself every 6 hours. Appearance (light or dark) and language are chosen there as well.

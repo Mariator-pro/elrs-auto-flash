@@ -7,7 +7,7 @@ export interface Settings {
   hideAutoUpdateWarning?: boolean; // interface: don't ask again before auto update goes on
   releaseCandidates: boolean;
   rememberWebFlasher?: boolean; // desktop app: keep what was typed into the Web Flasher after quitting
-  ui?: { lang?: string; theme?: 'light' | 'dark' }; // kept for the interface, whose port changes with every start
+  ui?: { lang?: string; theme?: 'light' | 'dark'; search?: 'scan' | 'waves' | 'radar' | 'off' }; // kept for the interface, whose port changes with every start
 }
 
 export function defaultSettings(): Settings {

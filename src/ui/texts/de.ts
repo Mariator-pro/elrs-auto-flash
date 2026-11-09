@@ -183,6 +183,9 @@ export const de: Texts = {
   off: 'Aus:',
   rememberWebFlasherOn: 'Die App speichert Binding-Phrase und WLAN-Daten auf diesem Rechner, unverschlüsselt.',
   rememberWebFlasherOff: 'Die App löscht sie beim Beenden.',
+  searchLook: 'Animation bei der Suche',
+  searchLookText: 'Bewegt sich auf der Seite „Geräte“ im Hintergrund, solange die App im Heimnetz nach Geräten sucht. Hast du am Rechner weniger Bewegung eingestellt, bleibt sie stehen.',
+  searchLooks: { scan: 'Lichtband', waves: 'Funkwellen', radar: 'Radar', off: 'Aus' },
 
   webFlasherNote:
     'Mit dem Web Flasher von ExpressLRS flashst du jede Version mit eigener Binding-Phrase und eigenen WLAN-Daten, per Kabel oder als Datei, die du per WLAN hochlädst. Das hilft zum Beispiel bei neuen Empfängern, anderen Einstellungen oder einer älteren Version. Die Schutzregeln dieser App gelten hier nicht, alle Einstellungen triffst du selbst. Dafür brauchst du eine Internetverbindung.',

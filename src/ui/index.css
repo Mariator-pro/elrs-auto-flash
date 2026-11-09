@@ -30,3 +30,159 @@ body {
 .field-list .menu-item[data-focus-visible='true'] {
   background-color: color-mix(in oklab, var(--default), var(--foreground) 8%);
 }
+
+/* Animation behind the devices while the app looks for them, one of three chosen in the settings. All parts
+   run on the same clock (set in SearchBackground), so a card on the network lights up when the animation
+   reaches it. With reduced motion only the still parts stay. */
+/* how far a wave has run, 0 to 1; the keyframes hold no var(), Chrome keeps those from the start */
+@property --search-p {
+  syntax: '<number>';
+  inherits: false;
+  initial-value: 0;
+}
+[data-search] {
+  --search-a1: color-mix(in oklab, var(--accent) 18%, transparent);
+  --search-a2: color-mix(in oklab, var(--accent) 7%, transparent);
+  --search-line: color-mix(in oklab, var(--accent) 50%, transparent);
+  --search-ring: color-mix(in oklab, var(--accent) 11%, transparent);
+}
+.search-bg {
+  position: fixed;
+  top: 0;
+  bottom: 0;
+  z-index: -1;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.search-radar {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 260vmax;
+  height: 260vmax;
+  translate: -50% -50%;
+  mask-image: radial-gradient(circle, #000 0, #000 12%, transparent 30%);
+}
+.search-rings,
+.search-beam {
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+}
+.search-rings {
+  background: repeating-radial-gradient(circle, transparent 0 139px, var(--search-ring) 139px 140px);
+}
+.search-beam {
+  background: conic-gradient(from 0deg, transparent 0 270deg, var(--search-a2) 320deg, var(--search-a1) 359.3deg, var(--search-line) 359.3deg 360deg);
+  animation: search-turn 6s linear infinite;
+}
+@keyframes search-turn {
+  to {
+    rotate: 360deg;
+  }
+}
+
+.search-wave {
+  --search-r: calc(var(--search-p) * var(--search-rmax));
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(
+    circle at var(--search-cx) var(--search-cy),
+    transparent calc(var(--search-r) - 90px),
+    var(--search-a2) calc(var(--search-r) - 2px),
+    var(--search-line) var(--search-r),
+    transparent calc(var(--search-r) + 1.5px)
+  );
+  animation: search-wave 6s linear infinite;
+}
+.search-wave:nth-child(2) {
+  animation-delay: -2s;
+}
+.search-wave:nth-child(3) {
+  animation-delay: -4s;
+}
+@keyframes search-wave {
+  0% {
+    --search-p: 0;
+    opacity: 1;
+  }
+  70% {
+    opacity: 0.7;
+  }
+  100% {
+    --search-p: 1;
+    opacity: 0;
+  }
+}
+
+.search-dots {
+  position: absolute;
+  inset: 0;
+  background: radial-gradient(circle, color-mix(in oklab, var(--foreground) 10%, transparent) 1.2px, transparent 1.7px) 11px 11px / 22px 22px;
+}
+.search-dots-lit {
+  background: radial-gradient(circle, var(--accent) 1.6px, transparent 2.1px) 11px 11px / 22px 22px;
+  mask: linear-gradient(transparent, #000 70%, transparent) no-repeat;
+  mask-size: 100% var(--search-bh);
+  animation: search-lit 6s linear infinite;
+}
+.search-band {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: var(--search-bh);
+  background: linear-gradient(transparent, var(--search-a2) 65%, var(--search-a1) 98%, var(--search-line) 98% 100%);
+  animation: search-band 6s linear infinite;
+}
+@keyframes search-band {
+  0% {
+    translate: 0 calc(-1 * var(--search-bh));
+  }
+  80%,
+  100% {
+    translate: 0 var(--search-h);
+  }
+}
+@keyframes search-lit {
+  0% {
+    mask-position: 0 calc(-1 * var(--search-bh));
+  }
+  80%,
+  100% {
+    mask-position: 0 var(--search-h);
+  }
+}
+
+[data-search] .search-hit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  pointer-events: none;
+  opacity: 0;
+  box-shadow:
+    0 0 0 1.5px var(--search-line),
+    0 0 28px var(--search-a1);
+  animation: search-hit var(--search-period, 6s) linear var(--search-delay, 0s) infinite;
+}
+@keyframes search-hit {
+  0% {
+    opacity: 1;
+  }
+  18%,
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .search-beam,
+  .search-wave,
+  .search-dots-lit,
+  .search-band,
+  [data-search] .search-hit::after {
+    display: none;
+  }
+}

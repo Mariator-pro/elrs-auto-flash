@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { PREFS_META, type PrefsView } from '../server/api.ts';
+import { PREFS_META, SEARCH_LOOKS, type PrefsView, type SearchLook } from '../server/api.ts';
 import { post } from './api.ts';
 import { LANGUAGES, TEXTS, type Lang } from './texts.ts';
 import { PrefsContext, type Theme } from './usePrefs.ts';
@@ -26,6 +26,7 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
   const [theme, setTheme] = useState<Theme>(() =>
     pick(initial.theme, ['light', 'dark'] as const, window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
   );
+  const [search, setSearch] = useState<SearchLook>(() => pick(initial.search, SEARCH_LOOKS, 'scan'));
   useEffect(() => {
     document.documentElement.lang = lang;
   }, [lang]);
@@ -40,5 +41,13 @@ export function PrefsProvider({ children }: { children: React.ReactNode }) {
     setTheme(t);
     save({ theme: t });
   };
-  return <PrefsContext value={{ t: TEXTS[lang], lang, setLang: chooseLang, theme, setTheme: chooseTheme }}>{children}</PrefsContext>;
+  const chooseSearch = (s: SearchLook) => {
+    setSearch(s);
+    save({ search: s });
+  };
+  return (
+    <PrefsContext value={{ t: TEXTS[lang], lang, setLang: chooseLang, theme, setTheme: chooseTheme, search, setSearch: chooseSearch }}>
+      {children}
+    </PrefsContext>
+  );
 }

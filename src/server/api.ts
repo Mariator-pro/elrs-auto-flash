@@ -167,11 +167,14 @@ export const TOKEN_HEADER = 'x-elrs-auto-flash-token';
 export const TOKEN_HASH = 'token';
 export const TOKEN_META = 'elrs-auto-flash-token';
 
-// Language and theme, kept by the server: the port changes with every start, and the browser keeps
-// what a page stores per port, so it would forget them.
+// Language, theme and the animation behind the devices, kept by the server: the port changes with every
+// start, and the browser keeps what a page stores per port, so it would forget them.
+export const SEARCH_LOOKS = ['scan', 'waves', 'radar', 'off'] as const;
+export type SearchLook = (typeof SEARCH_LOOKS)[number];
 export interface PrefsView {
   lang?: string;
   theme?: 'light' | 'dark';
+  search?: SearchLook;
 }
 export const PREFS_META = 'elrs-auto-flash-prefs';
 
