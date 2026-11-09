@@ -126,7 +126,7 @@ export function SettingsPage({ state, run, onAlwaysAutoUpdate }: { state: StateV
 
       {/* only the desktop app can delete them; in a browser they belong to its storage */}
       {state.desktop && (
-        <Card>
+        <Card id="remember-web-flasher">
           <Card.Header>
             <Card.Title>{t.rememberWebFlasher}</Card.Title>
           </Card.Header>

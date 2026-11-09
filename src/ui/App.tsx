@@ -51,7 +51,17 @@ export function App() {
           </Alert>
         )}
         {/* outside the switch below, so it stays loaded while another page is shown */}
-        {flasherOpened && <WebFlasherPage hidden={page !== 'web-flasher'} />}
+        {flasherOpened && (
+          <WebFlasherPage
+            hidden={page !== 'web-flasher'}
+            remember={state?.desktop ? state.settings.rememberWebFlasher : undefined}
+            onSettings={() => {
+              setPage('settings');
+              // the switch is far down the settings page
+              requestAnimationFrame(() => document.getElementById('remember-web-flasher')?.scrollIntoView({ block: 'center' }));
+            }}
+          />
+        )}
         {page === 'web-flasher' ? null : !state ? (
           <Spinner />
         ) : page === 'activity' ? (

@@ -186,6 +186,11 @@ export const de: Texts = {
 
   webFlasherNote:
     'Mit dem Web Flasher von ExpressLRS flashst du jede Version mit eigener Binding-Phrase und eigenen WLAN-Daten, per Kabel oder als Datei, die du per WLAN hochlädst. Das hilft zum Beispiel bei neuen Empfängern, anderen Einstellungen oder einer älteren Version. Die Schutzregeln dieser App gelten hier nicht, alle Einstellungen triffst du selbst. Dafür brauchst du eine Internetverbindung.',
+  webFlasherKept: 'Die App merkt sich deine Eingaben',
+  webFlasherKeptText: 'Binding-Phrase und WLAN-Daten bleiben auf diesem Rechner, unverschlüsselt.',
+  webFlasherDeleted: 'Die App löscht deine Eingaben beim Beenden',
+  webFlasherDeletedText: 'Binding-Phrase und WLAN-Daten bleiben nicht auf diesem Rechner.',
+  changeSetting: 'Einstellung ändern',
   noSerialTitle: 'Dieser Browser kann nicht per Kabel flashen',
   noSerialText: 'Download und WiFi funktionieren. Für Serial UART und Betaflight Passthrough öffne diese Seite in Chrome oder Edge.',
   webFlasherOffline: 'Der Web Flasher ist nicht erreichbar',

@@ -190,6 +190,11 @@ const en = {
 
   webFlasherNote:
     'The ExpressLRS Web Flasher flashes any version with your own binding phrase and WiFi details, over a cable or as a file you upload over WiFi. Use it for new receivers, other settings or an older version. This app’s safety rules don’t apply here: you choose every setting yourself. It needs an internet connection.',
+  webFlasherKept: 'The app remembers your entries',
+  webFlasherKeptText: 'Your binding phrase and WiFi details stay on this computer, unencrypted.',
+  webFlasherDeleted: 'The app deletes your entries when it quits',
+  webFlasherDeletedText: 'Your binding phrase and WiFi details don’t stay on this computer.',
+  changeSetting: 'Change setting',
   noSerialTitle: 'This browser can’t flash over a cable',
   noSerialText: 'Download and WiFi work. For Serial UART and Betaflight Passthrough, open this page in Chrome or Edge.',
   webFlasherOffline: 'Can’t reach the Web Flasher',

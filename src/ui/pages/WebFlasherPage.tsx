@@ -18,7 +18,8 @@ async function reachable(): Promise<boolean> {
 }
 
 // Kept mounted once opened, so leaving the page does not cut off a running flash.
-export function WebFlasherPage({ hidden }: { hidden: boolean }) {
+// remember: whether the desktop app keeps the entries; undefined in a browser, whose storage the app can't clear.
+export function WebFlasherPage({ hidden, remember, onSettings }: { hidden: boolean; remember?: boolean; onSettings: () => void }) {
   const { t } = usePrefs();
   const [status, setStatus] = useState<'checking' | 'ok' | 'offline'>('checking');
   const check = () => {
@@ -33,6 +34,18 @@ export function WebFlasherPage({ hidden }: { hidden: boolean }) {
         <h1 className="m-0 text-3xl font-bold tracking-tight">ExpressLRS Web Flasher</h1>
         <p className="m-0 max-w-3xl text-sm leading-relaxed text-muted">{t.webFlasherNote}</p>
       </div>
+      {remember !== undefined && (
+        <Alert status="accent">
+          <Alert.Indicator />
+          <Alert.Content>
+            <Alert.Title>{remember ? t.webFlasherKept : t.webFlasherDeleted}</Alert.Title>
+            <Alert.Description>{remember ? t.webFlasherKeptText : t.webFlasherDeletedText}</Alert.Description>
+          </Alert.Content>
+          <Button variant="outline" onPress={onSettings}>
+            {t.changeSetting}
+          </Button>
+        </Alert>
+      )}
       {!hasSerial && (
         <Alert status="warning">
           <Alert.Indicator />
