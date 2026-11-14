@@ -6,7 +6,7 @@ import { gunzipSync } from 'node:zlib';
 import { afterEach, describe, expect, it } from 'vitest';
 import { archivePath } from '../src/core/archive.ts';
 import { uploadFirmware } from '../src/core/device.ts';
-import { prepareFlash, runFlash } from '../src/core/flash.ts';
+import { prepareFlash, runFlash, wifiAfter } from '../src/core/flash.ts';
 import { paths, type Paths } from '../src/core/paths.ts';
 import { fakeDevice, tempDir, testArchive } from './helpers.ts';
 
@@ -223,8 +223,13 @@ describe('runFlash', () => {
     const dev = await receiver({ after: '4.1.0' });
     const plan = await planFor(dev);
     const steps: string[] = [];
-    expect(await runFlash(plan, { ...quick, wait: false, onStep: (s) => steps.push(s) })).toEqual({ result: 'unconfirmed', check: 'later' });
+    expect(await runFlash(plan, { ...quick, wait: false, onStep: (s) => steps.push(s) })).toEqual({ result: 'unconfirmed', check: 'later', wifiAfter: 60 });
     expect(steps).toEqual(['upload']);
+  });
+
+  it('reads how long the device keeps its WiFi off after a start, 60 s when it has no valid value', () => {
+    expect(wifiAfter({ 'wifi-on-interval': 30 })).toBe(30);
+    for (const v of [undefined, 0, -1, '60', 99999]) expect(wifiAfter({ 'wifi-on-interval': v })).toBe(60);
   });
 
   it('takes the old version right after the upload for one from before the restart, and asks again', async () => {

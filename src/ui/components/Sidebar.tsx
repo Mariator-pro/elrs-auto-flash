@@ -3,14 +3,16 @@ import type { StateView } from '../../server/api.ts';
 import { dateTime } from '../format.ts';
 import { LANGUAGES, type Lang } from '../texts.ts';
 import { usePrefs, type Theme } from '../usePrefs.ts';
+import { useBeat } from '../beat.ts';
 import { ActivityIcon, AntennaIcon, BoltIcon, DevicesIcon, MoonIcon, PlugIcon, RefreshIcon, SettingsIcon, SunIcon } from './icons.tsx';
 
 export type Page = 'devices' | 'activity' | 'settings' | 'web-flasher';
 
 // Pulses like the dot of the search, so it's clear that updates start without a click.
 function ActiveBolt() {
+  const ref = useBeat<HTMLSpanElement>();
   return (
-    <span className="relative inline-flex size-4 text-amber-400">
+    <span ref={ref} className="relative inline-flex size-4 text-amber-400">
       <BoltIcon size={16} className="absolute inset-0 fill-current opacity-75 motion-safe:animate-ping" />
       <BoltIcon size={16} className="relative fill-current" />
     </span>

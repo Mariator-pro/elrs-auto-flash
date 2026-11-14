@@ -96,7 +96,7 @@ Custom builds, devices newer than the target version and devices without a targe
 
 ### 5. Activity
 
-The Activity page lists what happened since the start, grouped by minute. An update takes one line with the old and the new version. Devices that did the same at once (all found at the start, or after a new target version) share one line that opens up.
+The Activity page lists what happened in the last 30 days, under a heading for each day and grouped by minute. Each start of the app gets its own line, and updates run from the [command line](docs/command-line.md) show up here as well. An update takes one line with the old and the new version. Devices that did the same at once (all found at the start, or after a new target version) share one line that opens up. "Clear activity" at the top removes all entries.
 
 ![The activity page](docs/screenshots/activity.png)
 
@@ -126,7 +126,7 @@ In the app:
 
 ## Your data on the computer
 
-Settings, the last list of versions, the known devices and the firmware archives are kept in:
+Settings, the last list of versions, the known devices, the activity of the last 30 days and the firmware archives are kept in:
 
 - macOS: `~/Library/Application Support/ELRS Auto Flash/`
 - Windows: `%LOCALAPPDATA%\ELRS Auto Flash\`

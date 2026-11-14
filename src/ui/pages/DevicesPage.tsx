@@ -1,7 +1,9 @@
-import { Alert, Button } from '@heroui/react';
+import { Alert, Button, ListBox, SearchField, Select } from '@heroui/react';
+import { useState } from 'react';
 import type { DeviceView, StateView, WatchState } from '../../server/api.ts';
 import { post } from '../api.ts';
 import { DeviceCard } from '../components/DeviceCard.tsx';
+import { SearchIcon } from '../components/icons.tsx';
 import { SearchBackground } from '../components/SearchBackground.tsx';
 import { message, sentence, time } from '../format.ts';
 import { usePrefs } from '../usePrefs.ts';
@@ -22,6 +24,8 @@ const ORDER: WatchState[] = [
   'no-target-version',
   'current',
 ];
+type Filter = 'all' | 'update' | 'current';
+const UPDATING: WatchState[] = ['update', 'queued', 'flashing'];
 const sorted = (list: DeviceView[]) =>
   [...list].sort((a, b) => ORDER.indexOf(a.state) - ORDER.indexOf(b.state) || (a.product ?? a.ip).localeCompare(b.product ?? b.ip));
 
@@ -29,8 +33,17 @@ export function DevicesPage({ state, run, onSettings }: { state: StateView; run:
   const { t, search } = usePrefs();
   // no search while macOS blocks the local network, so nothing moves then
   const searching = !state.problems.blocked && search !== 'off';
-  const online = sorted(state.devices.filter((d) => d.online));
-  const away = sorted(state.devices.filter((d) => !d.online));
+  const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<Filter>('all');
+  const q = query.trim().toLowerCase();
+  const found = state.devices.filter((d) => !q || [d.name, d.label, d.product, d.device, d.target, d.ip, d.mac].some((v) => v?.toLowerCase().includes(q)));
+  const fits = (d: DeviceView, f: Filter) => f === 'all' || (f === 'update' ? UPDATING.includes(d.state) : d.state === 'current');
+  const shown = found.filter((d) => fits(d, filter));
+  // choices without a device for the current search stay in the list, greyed out
+  const empty = (['update', 'current'] as const).filter((f) => f !== filter && !found.some((d) => fits(d, f)));
+  const online = sorted(shown.filter((d) => d.online));
+  const away = sorted(shown.filter((d) => !d.online));
+  const awayUpdates = away.filter((d) => d.state === 'update').length;
   const noticed = state.devices.filter((d) => d.notice);
   const act = (path: string, key: string) => run(() => post(path, { key }));
   const card = (d: DeviceView) => (
@@ -129,6 +142,62 @@ export function DevicesPage({ state, run, onSettings }: { state: StateView; run:
         </div>
       )}
 
+      {state.devices.length > 0 && (
+        <div className="flex flex-wrap items-center gap-3">
+          <SearchField aria-label={t.searchDevices} variant="secondary" className="min-w-48 flex-1 sm:max-w-80" value={query} onChange={setQuery}>
+            <SearchField.Group>
+              <SearchField.SearchIcon />
+              <SearchField.Input placeholder={t.searchDevices} />
+              <SearchField.ClearButton />
+            </SearchField.Group>
+          </SearchField>
+          <Select
+            variant="secondary"
+            aria-label={t.filterLabel}
+            className="w-52"
+            selectedKey={filter}
+            disabledKeys={empty}
+            onSelectionChange={(k) => k !== null && setFilter(k as Filter)}
+          >
+            <Select.Trigger>
+              <Select.Value />
+              <Select.Indicator />
+            </Select.Trigger>
+            <Select.Popover className="field-list">
+              <ListBox>
+                {(['all', 'update', 'current'] as const).map((f) => {
+                  const label = f === 'all' ? t.filterAll : t.states[f];
+                  return (
+                    <ListBox.Item key={f} id={f} textValue={label}>
+                      {label}
+                      <ListBox.ItemIndicator />
+                    </ListBox.Item>
+                  );
+                })}
+              </ListBox>
+            </Select.Popover>
+          </Select>
+        </div>
+      )}
+      {state.devices.length > 0 && shown.length === 0 && (
+        <div className="flex flex-col items-center gap-3 px-6 py-12 text-center">
+          <span className="flex size-12 items-center justify-center rounded-full bg-surface-secondary text-muted">
+            <SearchIcon size={22} />
+          </span>
+          <h2 className="m-0 text-base font-semibold">{t.noMatch}</h2>
+          <Button
+            variant="outline"
+            size="sm"
+            onPress={() => {
+              setQuery('');
+              setFilter('all');
+            }}
+          >
+            {t.resetFilter}
+          </Button>
+        </div>
+      )}
+
       {online.length > 0 && (
         <section aria-labelledby="online" className="flex flex-col gap-3">
           <h2 id="online" className="m-0 text-xs font-semibold tracking-wider text-muted uppercase">
@@ -141,6 +210,7 @@ export function DevicesPage({ state, run, onSettings }: { state: StateView; run:
         <section aria-labelledby="away" className="flex flex-col gap-3">
           <h2 id="away" className="m-0 text-xs font-semibold tracking-wider text-muted uppercase">
             {t.offNetwork(away.length)}
+            {awayUpdates > 0 && <span className="text-warning"> · {t.needUpdate(awayUpdates)}</span>}
           </h2>
           <div className="grid gap-3 [grid-template-columns:repeat(auto-fill,minmax(300px,1fr))]">{away.map(card)}</div>
         </section>

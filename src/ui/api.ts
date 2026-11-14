@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { TOKEN_HASH, TOKEN_HEADER, TOKEN_META, type ActivityEntry, type ErrorCode, type StateView } from '../server/api.ts';
+import { ACTIVITY_MAX, TOKEN_HASH, TOKEN_HEADER, TOKEN_META, type ActivityEntry, type ErrorCode, type StateView } from '../server/api.ts';
 import type { Texts } from './texts.ts';
 
 // The server's key for this start: behind # in the address the page was opened at, kept for this tab
@@ -68,9 +68,10 @@ export function useServer(): { state?: StateView; activity: ActivityEntry[]; con
     const merge = (more: ActivityEntry[]) =>
       setActivity((now) => {
         const ids = new Set(now.map((a) => a.id));
-        return [...now, ...more.filter((a) => !ids.has(a.id))].sort((a, b) => b.id - a.id).slice(0, 500);
+        return [...now, ...more.filter((a) => !ids.has(a.id))].sort((a, b) => b.id - a.id).slice(0, ACTIVITY_MAX);
       });
     const es = new EventSource(`/api/events?token=${encodeURIComponent(token)}`);
+    es.addEventListener('activity-cleared', () => setActivity([]));
     es.addEventListener('state', (e) => setState(JSON.parse((e as MessageEvent).data) as StateView));
     es.addEventListener('activity', (e) => merge([JSON.parse((e as MessageEvent).data) as ActivityEntry]));
     es.onopen = () => {

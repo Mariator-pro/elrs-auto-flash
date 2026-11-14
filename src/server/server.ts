@@ -3,6 +3,7 @@ import { randomBytes } from 'node:crypto';
 import { mkdir, readFile, stat } from 'node:fs/promises';
 import { createServer, type IncomingMessage, type ServerResponse } from 'node:http';
 import { extname, join, normalize, sep } from 'node:path';
+import { activityFile, activityLines, loadActivity, type NewEntry, type StoredEntry } from '../core/activity.ts';
 import { AppError } from '../core/errors.ts';
 import { dismiss, rename, updateKnown, type KnownDevice } from '../core/known.ts';
 import type { Paths } from '../core/paths.ts';
@@ -11,6 +12,7 @@ import { loadSettings, saveSettings, type Settings } from '../core/settings.ts';
 import { MIN_MAJOR } from '../core/version.ts';
 import { createWatcher, type WatchDeps, type WatchEvent } from '../core/watch.ts';
 import {
+  ACTIVITY_MAX,
   deviceLabel,
   MAX_NAME,
   SEARCH_LOOKS,
@@ -21,7 +23,6 @@ import {
   type AppUpdateView,
   type DeviceView,
   type ErrorCode,
-  type FlashOutcome,
   type WatchState,
   type PrefsView,
   type LicensesView,
@@ -98,7 +99,6 @@ const SECURITY_HEADERS = {
   'X-Content-Type-Options': 'nosniff',
   'Referrer-Policy': 'no-referrer',
 };
-const MAX_ACTIVITY = 500;
 
 // The names this computer's browser reaches the server by, on any port (Vite forwards from its own).
 const LOCAL_NAMES = ['localhost', '127.0.0.1'];
@@ -111,9 +111,6 @@ function hostName(host: string | undefined): string {
     return '';
   }
 }
-
-// An activity line before it gets its number and time (Omit for each kind of line).
-type NewEntry<T = ActivityEntry> = T extends unknown ? Omit<T, 'id' | 'at'> : never;
 
 async function body<T>(req: IncomingMessage): Promise<Partial<T>> {
   const chunks: Buffer[] = [];
@@ -142,6 +139,15 @@ function openFolder(dir: string): void {
   execFile(cmd, [dir], () => {});
 }
 
+// Restart, the device's WiFi wait, then joining the network and being found take a little longer.
+const BACK_MARGIN_MS = 20_000;
+
+function backBy(d: KnownDevice): DeviceView['backBy'] {
+  const u = d.unconfirmed;
+  if (!u?.wifiAfter || d.type === 'tx') return undefined;
+  return { from: u.at, until: new Date(Date.parse(u.at) + u.wifiAfter * 1000 + BACK_MARGIN_MS).toISOString() };
+}
+
 function deviceView(d: KnownDevice, state: WatchState, online: boolean, step?: DeviceView['step']): DeviceView {
   return {
     key: d.key,
@@ -160,6 +166,7 @@ function deviceView(d: KnownDevice, state: WatchState, online: boolean, step?: D
     state,
     notice: d.notice && { kind: d.notice.kind, message: d.notice.message, code: d.notice.code, params: d.notice.params },
     unconfirmedTo: d.unconfirmed?.tag,
+    backBy: backBy(d),
     unsupportedReason: d.unsupported && { message: d.unsupported.reason, code: d.unsupported.code, params: d.unsupported.params },
     step,
   };
@@ -171,7 +178,9 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
   const p = o.paths;
   const token = randomBytes(24).toString('base64url');
   const devices = new Map<string, DeviceView>();
-  const activity: ActivityEntry[] = [];
+  // newest first, with numbers from this start on
+  const activity = (await loadActivity(p)).map((e, i) => ({ id: i + 1, ...e }) as ActivityEntry).reverse();
+  const file = activityFile(p);
   const clients = new Set<ServerResponse>();
   let settings: Settings = await loadSettings(p);
   // The interface's own switch, for this run only: opening it doesn't start an update unless auto update
@@ -182,8 +191,7 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
   let problems: StateView['problems'] = {};
   let checking = false;
   let lastScan: string | undefined;
-  let nextId = 1;
-  let setupSeen = false;
+  let nextId = activity.length + 1;
 
   const send = (event: string, data: unknown) => {
     for (const c of clients) c.write(`event: ${event}\ndata: ${JSON.stringify(data)}\n\n`);
@@ -226,52 +234,29 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
   };
 
   const log = (entry: NewEntry) => {
-    const full = { id: nextId++, at: new Date().toISOString(), ...entry } as ActivityEntry;
+    const stored = { at: new Date().toISOString(), ...entry } as StoredEntry;
+    const full = { id: nextId++, ...stored } as ActivityEntry;
     activity.unshift(full);
-    activity.length = Math.min(activity.length, MAX_ACTIVITY);
+    activity.length = Math.min(activity.length, ACTIVITY_MAX);
+    void file.append(stored);
     send('activity', full);
   };
-
-  const named = (d: KnownDevice) => ({ key: d.key, name: deviceLabel(d) });
-
-  // What a result already says, so the line for the state it leads to is left out: the state a device
-  // is expected in next, and devices whose return the result line already reports.
-  const expected = new Map<string, WatchState>();
-  const backSaid = new Set<string>();
-  const leadsTo = (o: FlashOutcome): WatchState => {
-    if (o.result === 'done') return 'current';
-    if (o.result === 'unconfirmed' || o.result === 'mismatch') return o.result;
-    if (o.result === 'stopped' && o.kind === 'unsupported') return 'unsupported';
-    if (o.result === 'stopped' && o.kind === 'target') return 'mismatch';
-    return 'update';
-  };
+  const toActivity = activityLines(log);
 
   const onEvent = (e: WatchEvent) => {
+    toActivity(e);
     switch (e.kind) {
       case 'setup':
-        if (setupSeen && e.target?.tag !== target?.tag) log({ type: 'target', to: e.target?.tag });
-        setupSeen = true;
         settings = e.settings;
         releases = e.releases;
         target = e.target;
         break;
       case 'device': {
-        const { device: d, state: now, online, before } = e;
-        const to = target?.tag;
+        const { device: d, state: now, online } = e;
         const view = deviceView(d, now, online, devices.get(d.key)?.step);
         const last = devices.get(d.key)?.lastAttempt;
         if (last && now !== 'current') view.lastAttempt = last;
         devices.set(d.key, view);
-        if (!before) {
-          if (online) log({ ...named(d), type: 'found', version: d.version, state: now, to });
-        } else if (online && !before.online) {
-          if (!backSaid.delete(d.key)) log({ ...named(d), type: 'back', version: d.version, state: now, to });
-        } else if (!online && before.online) log({ ...named(d), type: 'left' });
-        // waiting and flashing show on the card; the flash gets its own start line
-        else if (now !== before.state && now !== 'flashing' && now !== 'queued' && expected.get(d.key) !== now) {
-          log({ ...named(d), type: 'state', state: now, to });
-        }
-        if (now !== 'flashing' && now !== before?.state) expected.delete(d.key);
         break;
       }
       case 'removed':
@@ -281,7 +266,6 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
         const view = devices.get(e.device.key);
         if (view) view.step = { step: e.step, percent: e.percent };
         if (view && e.step === 'prepare') delete view.lastAttempt;
-        if (e.step === 'prepare' && target) log({ ...named(e.device), type: 'start', to: target.tag, from: e.device.version });
         break;
       }
       case 'result': {
@@ -290,15 +274,11 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
         const failed = e.outcome.result === 'stopped' || e.outcome.result === 'failed' || e.outcome.result === 'wrong-version';
         if (view && failed) view.lastAttempt = { to: e.to, outcome: e.outcome };
         else if (view) delete view.lastAttempt;
-        expected.set(e.device.key, leadsTo(e.outcome));
-        if (e.later) backSaid.add(e.device.key);
-        log({ ...named(e.device), type: 'result', to: e.to, outcome: e.outcome, later: e.later });
         break;
       }
       case 'problem':
         if (e.problem === 'blocked') problems = { ...problems, blocked: e.message !== undefined || undefined };
         else problems = { ...problems, [e.problem]: e.message };
-        if (e.message !== undefined && e.problem !== 'download') log({ type: 'problem', problem: e.problem, ...e.message });
         break;
       case 'scanned':
         lastScan = e.at;
@@ -319,6 +299,11 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
   const routes: Record<string, (req: IncomingMessage) => Promise<unknown>> = {
     'GET /api/state': async () => state(),
     'GET /api/activity': async () => activity,
+    'POST /api/activity/clear': async () => {
+      activity.length = 0;
+      await file.clear();
+      send('activity-cleared', {});
+    },
 
     'POST /api/settings': async (req) => {
       const b = await body<{ targetMajor: number | null; autoUpdate: boolean; alwaysAutoUpdate: boolean; hideAutoUpdateWarning: boolean; releaseCandidates: boolean; rememberWebFlasher: boolean }>(req);
@@ -483,6 +468,7 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
     server.once('error', reject);
     server.listen(o.port, '127.0.0.1', resolve);
   });
+  log({ type: 'launch', by: o.desktop ? 'app' : 'browser' });
   watcher.start();
   const address = server.address();
   const url = `http://localhost:${typeof address === 'object' && address ? address.port : o.port}`;
@@ -496,6 +482,7 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
       for (const c of clients) c.end();
       server.close();
       await watcher.stop();
+      await file.flushed();
     },
   };
 }

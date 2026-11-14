@@ -65,7 +65,7 @@ export function App() {
         {page === 'web-flasher' ? null : !state ? (
           <Spinner />
         ) : page === 'activity' ? (
-          <ActivityPage activity={activity} />
+          <ActivityPage activity={activity} run={run} />
         ) : page === 'settings' ? (
           <SettingsPage
             state={state}

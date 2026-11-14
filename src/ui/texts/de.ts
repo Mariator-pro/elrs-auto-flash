@@ -76,6 +76,12 @@ export const de: Texts = {
   dismiss: 'Wieder freigeben',
   onNetwork: (n) => `Im Netz · ${n}`,
   offNetwork: (n) => `Nicht im Netz · ${n}`,
+  searchDevices: 'Geräte durchsuchen',
+  filterLabel: 'Geräte zeigen',
+  filterAll: 'Alle Geräte',
+  noMatch: 'Keine passenden Geräte',
+  resetFilter: 'Alle Geräte zeigen',
+  needUpdate: (n) => `${n} mit Update`,
   nothingFound: 'Noch keine Geräte gefunden',
   nothingFoundText:
     'Geräte erscheinen hier, solange ihr WLAN an ist. Einen Empfänger versorgst du mit Strom, lässt den Sender aus und wartest etwa eine Minute. Bei einem Sendemodul schaltest du das WLAN im ELRS-Lua-Skript ein. Ins Heimnetz kommt ein Gerät erst, wenn du es einmal auf der Webseite des Geräts eingetragen hast. Bis dahin öffnet es ein eigenes Netz, „ExpressLRS RX“ oder „ExpressLRS TX“.',
@@ -101,6 +107,9 @@ export const de: Texts = {
   ownBuildText: (tag) =>
     `Einen eigenen Build aktualisiert die App nie automatisch. Ist er neuer als ${tag}, kann das Flashen von ${tag} die Einstellungen des Geräts zurücksetzen (z. B. Model Match, Ausgänge, Protokoll). Binding-Phrase und WLAN bleiben erhalten.`,
   newerText: 'Die App setzt ein Gerät nie auf eine ältere Version zurück.',
+  backIn: 'Wieder im Netz in etwa',
+  backLate: 'Dauert etwas länger als erwartet',
+  notBack: 'Noch nicht zurück. Prüfe deinen Empfänger. Die App bestätigt das Update, sobald er wieder im Netz ist.',
   unconfirmedText: (tag) =>
     `Auf ${tag} aktualisiert. Bestätigt ist das Update, sobald das Gerät wieder im Netz ist. Lass den Sender aus, nach etwa einer Minute geht das WLAN des Geräts an.`,
   unconfirmedTextTx: (tag) =>
@@ -121,7 +130,19 @@ export const de: Texts = {
     reboot: 'Gerät startet neu …',
   },
 
-  activityEmpty: 'Noch ist nichts passiert.',
+  activityEmpty: 'In den letzten 30 Tagen ist nichts passiert.',
+  clearActivity: 'Aktivität löschen',
+  clearActivityTitle: 'Gesamte Aktivität löschen?',
+  clearActivityText: 'Damit verschwinden alle Einträge der letzten 30 Tage. Deine Geräte und Einstellungen bleiben, wie sie sind.',
+  clearActivityConfirm: 'Löschen',
+  today: 'Heute',
+  yesterday: 'Gestern',
+  actLaunch: {
+    app: 'ELRS Auto Flash gestartet',
+    browser: 'Browser-Oberfläche gestartet',
+    watch: '„watch“ im Terminal gestartet',
+    update: '„update“ im Terminal gestartet',
+  },
   actStates: {
     current: 'aktuell',
     update: 'Update verfügbar',

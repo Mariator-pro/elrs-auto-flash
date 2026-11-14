@@ -4,6 +4,7 @@ import { existsSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { createInterface } from 'node:readline/promises';
 import { parseArgs } from 'node:util';
+import { activityFile, activityLines, loadActivity, type NewEntry, type StoredEntry } from '../core/activity.ts';
 import { archivesToKeep, pruneArchives } from '../core/archive.ts';
 import { discover, looksBlocked, type Device } from '../core/discovery.ts';
 import { AppError } from '../core/errors.ts';
@@ -297,7 +298,8 @@ async function updateDevice(p: Paths, name: string, opts: { seconds: number; dry
       throw e;
     })
     .finally(() => shown !== -1 && process.stdout.write('\n'));
-  const { value: key } = await updateKnown(p, (l) => seen(l, { ...plan.device, ip, via: [] }).device.key);
+  const { value: known } = await updateKnown(p, (l) => seen(l, { ...plan.device, ip, via: [] }).device);
+  const key = known.key;
   for (const gone of await pruneArchives(p, archivesToKeep(releases.releases, s))) console.log(`Removed the firmware archive of ${gone}.`);
   showPlan(plan);
 
@@ -309,10 +311,19 @@ async function updateDevice(p: Paths, name: string, opts: { seconds: number; dry
     console.log(process.stdin.isTTY ? 'Not updated.' : '\nNot updated: add --yes to update without asking.');
     return;
   }
+  // the same lines the app shows under "Activity"
+  await loadActivity(p);
+  const file = activityFile(p);
+  const save = (e: NewEntry) => void file.append({ at: new Date().toISOString(), ...e } as StoredEntry);
+  const who = { key, name: deviceLabel(known) };
+  save({ type: 'launch', by: 'update' });
+  save({ ...who, type: 'start', to: plan.to, from: plan.device.version });
   const r = await runFlash(plan, {
     onStep: (step) =>
       console.log(step === 'upload' ? '\nUploading firmware ...' : 'Uploaded. The device is restarting; waiting up to 3 minutes for it to come back ...'),
   });
+  save({ ...who, type: 'result', to: plan.to, outcome: r });
+  await file.flushed();
   await updateKnown(p, (l) => l.filter((k) => k.key === key).forEach((k) => recordResult(k, plan.to, r)));
   const { ok, text } = resultLines(r, plan.to);
   console.log(text);
@@ -471,7 +482,14 @@ async function watch(p: Paths): Promise<void> {
   if (other) throw new UserError(`${busy(other)}.`);
   const forget = await noteRunning(p.server, { kind: 'watch' });
   console.log('Watching for ELRS devices (mDNS, and a search of the network every minute). Ctrl+C to stop.\n');
+  // the same lines the app shows under "Activity"
+  await loadActivity(p);
+  const file = activityFile(p);
+  const save = (e: NewEntry) => void file.append({ at: new Date().toISOString(), ...e } as StoredEntry);
+  save({ type: 'launch', by: 'watch' });
+  const toActivity = activityLines(save);
   const w = createWatcher(p, (e) => {
+    toActivity(e);
     if (e.kind === 'setup') watchTarget = e.target;
     const line = watchLine(e);
     if (line) console.log(e.kind === 'setup' ? `${line}\n` : `${clock()}  ${line}`);
@@ -481,7 +499,10 @@ async function watch(p: Paths): Promise<void> {
     if (stopping) process.exit(130);
     stopping = true;
     if (w.flashing()) console.log("\nA device is updating: stopping once it's done. Press Ctrl+C again to quit right away.");
-    void w.stop().finally(() => void forget().finally(() => process.exit(0)));
+    void w
+      .stop()
+      .then(file.flushed)
+      .finally(() => void forget().finally(() => process.exit(0)));
   });
   w.start();
 }

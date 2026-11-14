@@ -26,7 +26,7 @@ export interface KnownDevice {
   lastSeen: string;
   failures?: { tag: string; count: number }; // failed attempts at this target version
   notice?: Msg & { kind: 'mismatch' | 'failed'; at: string }; // no more attempts until dismissed
-  unconfirmed?: { tag: string; at: string }; // flashed to this version, not seen again since
+  unconfirmed?: { tag: string; at: string; wifiAfter?: number }; // flashed to this version, not seen again since; wifiAfter: seconds until its WiFi is back, when not waited for
   unsupported?: { tag: string; reason: string; code?: Msg['code']; params?: Msg['params'] }; // this version cannot be flashed onto it
 }
 
@@ -133,7 +133,7 @@ export function recordResult(d: KnownDevice, tag: string, r: FlashResult, now = 
       delete d.unconfirmed;
       break;
     case 'unconfirmed':
-      d.unconfirmed = { tag, at: now.toISOString() };
+      d.unconfirmed = { tag, at: now.toISOString(), ...(r.check === 'later' && r.wifiAfter && { wifiAfter: r.wifiAfter }) };
       break;
     case 'wrong-version':
       d.version = r.version;

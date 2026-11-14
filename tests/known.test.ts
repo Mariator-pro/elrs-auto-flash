@@ -84,7 +84,8 @@ describe('seen', () => {
     expect(knownState(device, target('4.1.0'))).toBe('unconfirmed');
     expect(seen(list, dev({ mac: 'A', version: '4.1.0' }), soon).confirmed).toEqual({ to: '4.1.0', result: { result: 'done', version: '4.1.0' } });
 
-    recordResult(device, '4.1.1', { result: 'unconfirmed', check: 'later' }, upload);
+    recordResult(device, '4.1.1', { result: 'unconfirmed', check: 'later', wifiAfter: 45 }, upload);
+    expect(device.unconfirmed).toEqual({ tag: '4.1.1', at: upload.toISOString(), wifiAfter: 45 });
     const later = new Date(upload.getTime() + STALE_MS);
     expect(seen(list, dev({ mac: 'A', version: '4.1.0' }), later).confirmed?.result).toEqual({ result: 'wrong-version', version: '4.1.0' });
   });

@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { ActivityEntry } from '../src/server/api.ts';
 import { groupActivity } from '../src/ui/activity.ts';
+import { dayHeading } from '../src/ui/format.ts';
+import { de } from '../src/ui/texts/de.ts';
 
 type NewEntry = ActivityEntry extends infer T ? (T extends unknown ? Omit<T, 'id'> : never) : never;
 
@@ -48,5 +50,15 @@ describe('groupActivity', () => {
         { kind: 'line', entry: { type: 'result', key: 'A' }, from: '4.0.1' },
       ],
     ]);
+  });
+});
+
+describe('dayHeading', () => {
+  const now = new Date(2026, 10, 14, 12);
+  it('names today and yesterday, other days by their date, the year only when it differs', () => {
+    expect(dayHeading(new Date(2026, 10, 14, 0, 5).toISOString(), de, now)).toBe('Heute');
+    expect(dayHeading(new Date(2026, 10, 13, 23, 55).toISOString(), de, now)).toBe('Gestern');
+    expect(dayHeading(new Date(2026, 10, 10, 9).toISOString(), de, now)).toBe('Dienstag, 10. November');
+    expect(dayHeading(new Date(2025, 11, 30, 9).toISOString(), de, now)).toBe('Dienstag, 30. Dezember 2025');
   });
 });

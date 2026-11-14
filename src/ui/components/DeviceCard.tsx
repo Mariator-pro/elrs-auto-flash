@@ -1,6 +1,7 @@
 import { Button, Card, Chip, Input, ProgressBar, TextField } from '@heroui/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { MAX_NAME, type DeviceView, type WatchState } from '../../server/api.ts';
+import { useBeat } from '../beat.ts';
 import { message, resultText, when } from '../format.ts';
 import { usePrefs } from '../usePrefs.ts';
 import { ArrowIcon, PencilIcon } from './icons.tsx';
@@ -21,6 +22,42 @@ export const COLORS: Record<WatchState, Color> = {
   flashing: 'accent',
 };
 
+// After the expected return, how long it may still take before the card asks you to check the receiver.
+const LATE_MS = 100_000;
+
+// A receiver after its upload: counts down to when it should be back on the network, then waits a little.
+function BackBy({ from, until }: { from: string; until: string }) {
+  const { t } = usePrefs();
+  const [now, setNow] = useState(Date.now);
+  useEffect(() => {
+    const timer = setInterval(() => setNow(Date.now()), 1000);
+    return () => clearInterval(timer);
+  }, []);
+  const start = Date.parse(from);
+  const end = Date.parse(until);
+  if (now >= end + LATE_MS) return <span className="text-sm leading-relaxed">{t.notBack}</span>;
+  const left = Math.max(0, Math.ceil((end - now) / 1000));
+  const counting = left > 0;
+  return (
+    <ProgressBar
+      aria-label={counting ? t.backIn : t.backLate}
+      value={counting ? ((end - now) / (end - start)) * 100 : 0}
+      isIndeterminate={!counting}
+      className="mt-auto"
+    >
+      <span className="text-sm">{counting ? t.backIn : t.backLate}</span>
+      {counting && (
+        <span className="font-mono text-sm font-semibold text-accent tabular-nums">
+          {Math.floor(left / 60)}:{String(left % 60).padStart(2, '0')}
+        </span>
+      )}
+      <ProgressBar.Track>
+        <ProgressBar.Fill />
+      </ProgressBar.Track>
+    </ProgressBar>
+  );
+}
+
 // One device: what it is, its version against the target, its state and what can be done about it.
 export function DeviceCard(props: {
   d: DeviceView;
@@ -34,11 +71,18 @@ export function DeviceCard(props: {
   const { d, target, autoUpdate, onUpdate, onDismiss, onForget, onRename } = props;
   const { t } = usePrefs();
   const [editing, setEditing] = useState<string>();
+  const ring = useBeat<HTMLSpanElement>(d.state === 'flashing');
   const kind = d.type === 'tx' ? t.module : d.type === 'rx' ? t.receiver : t.unknownType;
   const newer = target && (d.state === 'update' || d.state === 'queued' || d.state === 'flashing' || d.state === 'unconfirmed');
   const address = [d.ip, d.mac].filter(Boolean).join(' · ');
   return (
     <Card className={d.online ? 'search-hit' : 'opacity-70'}>
+      {d.state === 'flashing' && <span ref={ring} className="flash-ring" aria-hidden="true" />}
+      {d.state === 'unconfirmed' && (
+        <svg className="wait-edge" aria-hidden="true">
+          <rect />
+        </svg>
+      )}
       <Card.Content className="flex h-full flex-col gap-3.5">
         <div className="flex items-start justify-between gap-2.5">
           <div className="flex min-w-0 flex-col gap-1">
@@ -58,11 +102,9 @@ export function DeviceCard(props: {
             {d.name && d.product && <span className="text-sm">{d.product}</span>}
             <span className="text-sm text-muted">{[kind, d.device].filter(Boolean).join(' · ')}</span>
           </div>
-          {d.online && (
-            <Chip size="sm" variant="soft" color={COLORS[d.state]} className="shrink-0">
-              {t.states[d.state]}
-            </Chip>
-          )}
+          <Chip size="sm" variant="soft" color={COLORS[d.state]} className="shrink-0">
+            {t.states[d.state]}
+          </Chip>
         </div>
 
         {editing !== undefined && (
@@ -110,7 +152,10 @@ export function DeviceCard(props: {
 
         {d.online && d.state === 'custom-build' && target && <span className="text-sm leading-relaxed">{t.ownBuildText(target)}</span>}
         {d.online && d.state === 'newer' && <span className="text-sm text-muted">{t.newerText}</span>}
-        {d.state === 'unconfirmed' && d.unconfirmedTo && <span className="text-sm leading-relaxed">{d.type === 'tx' ? t.unconfirmedTextTx(d.unconfirmedTo) : t.unconfirmedText(d.unconfirmedTo)}</span>}
+        {d.state === 'unconfirmed' && d.backBy && <BackBy from={d.backBy.from} until={d.backBy.until} />}
+        {d.state === 'unconfirmed' && !d.backBy && d.unconfirmedTo && (
+          <span className="text-sm leading-relaxed">{d.type === 'tx' ? t.unconfirmedTextTx(d.unconfirmedTo) : t.unconfirmedText(d.unconfirmedTo)}</span>
+        )}
         {d.online && d.state === 'unsupported' && <span className="text-sm text-muted">{d.unsupportedReason ? message(d.unsupportedReason, t) : t.unsupportedText}</span>}
         {d.online && d.state === 'queued' && <span className="text-sm text-muted">{t.queuedText}</span>}
         {d.lastAttempt && (d.state === 'update' || d.state === 'custom-build') && (

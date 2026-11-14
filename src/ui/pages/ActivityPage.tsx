@@ -1,10 +1,11 @@
-import { Button, Card, Chip } from '@heroui/react';
+import { Button, Card, Chip, Modal } from '@heroui/react';
 import { useState } from 'react';
 import type { ActivityEntry, WatchState } from '../../server/api.ts';
 import { groupActivity, type ActivityItem } from '../activity.ts';
+import { post } from '../api.ts';
 import { COLORS, type Color } from '../components/DeviceCard.tsx';
-import { AlertIcon, ArrowIcon, CheckIcon, CrossIcon, SearchIcon, TargetIcon } from '../components/icons.tsx';
-import { message, resultText, time } from '../format.ts';
+import { AlertIcon, ArrowIcon, CheckIcon, CrossIcon, PowerIcon, SearchIcon, TargetIcon } from '../components/icons.tsx';
+import { dayHeading, message, resultText, time } from '../format.ts';
 import type { Texts } from '../texts.ts';
 import { usePrefs } from '../usePrefs.ts';
 
@@ -26,6 +27,8 @@ function line(a: ActivityEntry, t: Texts): string {
       return t.actLeft;
     case 'state':
       return t.actNow(stateText(a.state, a.to, t));
+    case 'launch':
+      return t.actLaunch[a.by];
     case 'start':
       return t.actStart(a.to);
     case 'target':
@@ -58,7 +61,7 @@ function Dot({ item }: { item: ActivityItem }) {
   const c = tone(item);
   const a = item.kind === 'line' ? item.entry : undefined;
   const Icon =
-    item.kind === 'wave' ? (item.target ? TargetIcon : SearchIcon) : c === 'success' ? CheckIcon : c === 'danger' ? CrossIcon : c === 'warning' ? AlertIcon : a?.type === 'start' || a?.type === 'target' ? TargetIcon : SearchIcon;
+    item.kind === 'wave' ? (item.target ? TargetIcon : SearchIcon) : a?.type === 'launch' ? PowerIcon : c === 'success' ? CheckIcon : c === 'danger' ? CrossIcon : c === 'warning' ? AlertIcon : a?.type === 'start' || a?.type === 'target' ? TargetIcon : SearchIcon;
   return (
     <span className={`flex size-7 shrink-0 items-center justify-center rounded-full ${DOT[c]}`}>
       <Icon size={15} />
@@ -125,19 +128,71 @@ function Wave({ item }: { item: Extract<ActivityItem, { kind: 'wave' }> }) {
   );
 }
 
-export function ActivityPage({ activity }: { activity: ActivityEntry[] }) {
+// Asks before all lines are removed; they can't be brought back.
+function ClearDialog({ onConfirm, onClose }: { onConfirm: () => void; onClose: () => void }) {
   const { t } = usePrefs();
+  return (
+    <Modal.Backdrop isOpen onOpenChange={(o) => !o && onClose()}>
+      <Modal.Container>
+        <Modal.Dialog>
+          <Modal.Header>
+            <Modal.Heading>{t.clearActivityTitle}</Modal.Heading>
+          </Modal.Header>
+          <Modal.Body className="text-sm leading-relaxed">
+            <p className="m-0">{t.clearActivityText}</p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" onPress={onClose}>
+              {t.cancel}
+            </Button>
+            <Button variant="danger" onPress={onConfirm}>
+              {t.clearActivityConfirm}
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
+  );
+}
+
+export function ActivityPage({ activity, run }: { activity: ActivityEntry[]; run: (fn: () => Promise<unknown>) => void }) {
+  const { t } = usePrefs();
+  const [asking, setAsking] = useState(false);
   const groups = groupActivity(activity);
+  const day = (iso: string) => new Date(iso).toDateString();
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="m-0 text-3xl font-bold tracking-tight">{t.activity}</h1>
-      <Card className="p-0">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h1 className="m-0 text-3xl font-bold tracking-tight">{t.activity}</h1>
+        {groups.length > 0 && (
+          <Button variant="danger-soft" onPress={() => setAsking(true)}>
+            {t.clearActivity}
+          </Button>
+        )}
+      </div>
+      {asking && (
+        <ClearDialog
+          onClose={() => setAsking(false)}
+          onConfirm={() => {
+            setAsking(false);
+            run(() => post('/api/activity/clear'));
+          }}
+        />
+      )}
+      <Card className="overflow-hidden p-0">
         <Card.Content className="p-0">
           {groups.length === 0 ? (
             <p className="m-0 p-5 text-sm text-muted">{t.activityEmpty}</p>
           ) : (
             <ol className="m-0 list-none p-0">
-              {groups.map((g) => (
+              {groups.flatMap((g, i) => [
+                ...(i === 0 || day(groups[i - 1]!.at) !== day(g.at)
+                  ? [
+                      <li key={`day-${g.at}`} className="border-b border-separator bg-surface-secondary px-5 py-2 text-xs font-semibold text-muted">
+                        <h2 className="m-0 text-xs font-semibold">{dayHeading(g.at, t)}</h2>
+                      </li>,
+                    ]
+                  : []),
                 <li key={g.at} className="flex gap-5 border-b border-separator px-5 py-4 last:border-b-0">
                   <span className="w-12 shrink-0 pt-1.5 font-mono text-xs text-muted">{time(g.at, t.locale)}</span>
                   <ul className="m-0 flex min-w-0 flex-1 list-none flex-col gap-4 p-0">
@@ -148,8 +203,8 @@ export function ActivityPage({ activity }: { activity: ActivityEntry[] }) {
                       </li>
                     ))}
                   </ul>
-                </li>
-              ))}
+                </li>,
+              ])}
             </ol>
           )}
         </Card.Content>

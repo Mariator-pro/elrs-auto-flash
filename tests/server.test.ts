@@ -3,10 +3,11 @@ import { request } from 'node:http';
 import { join } from 'node:path';
 import { afterEach, describe, expect, it } from 'vitest';
 import type { Device } from '../src/core/discovery.ts';
+import { loadActivity } from '../src/core/activity.ts';
 import { AppError } from '../src/core/errors.ts';
 import type { FlashPlan } from '../src/core/flash.ts';
 import { loadKnown, updateKnown } from '../src/core/known.ts';
-import { paths } from '../src/core/paths.ts';
+import { paths, type Paths } from '../src/core/paths.ts';
 import { loadSettings, saveSettings } from '../src/core/settings.ts';
 import { TOKEN_HEADER, type ActivityEntry, type AppUpdateView, type StateView } from '../src/server/api.ts';
 import { startServer, type AppUpdates, type RunningServer } from '../src/server/server.ts';
@@ -29,8 +30,8 @@ afterEach(async () => {
 });
 
 // A server on a free port whose watcher sees `found` and flashes nothing for real.
-async function server(found: Device[], opts: { staticDir?: string; licensesFile?: string; gone?: Set<string>; desktop?: boolean; appUpdates?: AppUpdates; autoUpdate?: boolean; alwaysAutoUpdate?: boolean } = {}) {
-  const p = paths(await tempDir());
+async function server(found: Device[], opts: { staticDir?: string; licensesFile?: string; gone?: Set<string>; desktop?: boolean; appUpdates?: AppUpdates; autoUpdate?: boolean; alwaysAutoUpdate?: boolean; paths?: Paths } = {}) {
+  const p = opts.paths ?? paths(await tempDir());
   await saveSettings(p, { autoUpdate: !!opts.autoUpdate, alwaysAutoUpdate: opts.alwaysAutoUpdate, releaseCandidates: false, targetMajor: 4, ui: { lang: 'de' } });
   const flashed: string[] = [];
   const s = await startServer({
@@ -196,6 +197,23 @@ describe('server', () => {
     expect((await api('POST', '/api/devices/rename', { key: '0A' })).status).toBe(400);
     await api('POST', '/api/devices/rename', { key: '0A', name: '' });
     expect((await until((x) => x.devices[0]?.name === undefined)).devices[0]!.label).toBe('RM RP1 · 0A');
+  });
+
+  it('keeps the activity over a restart, with a line for each start, until it is cleared', async () => {
+    const first = await server([rx('0A', '4.1.0')]);
+    await first.until((x) => x.devices.length === 1);
+    servers.splice(servers.indexOf(first.s), 1);
+    await first.s.close();
+    const { api, p, until } = await server([rx('0A', '4.1.0')], { paths: first.p });
+    await until((x) => x.devices.length === 1);
+    const kinds = async () => (await api<ActivityEntry[]>('GET', '/api/activity')).data.map((a) => a.type).reverse();
+    expect(await kinds()).toEqual(['launch', 'found', 'launch', 'found']);
+    const { data } = await api<ActivityEntry[]>('GET', '/api/activity');
+    expect(new Set(data.map((a) => a.id)).size).toBe(4);
+    expect(data.at(-1)).toMatchObject({ type: 'launch', by: 'browser' });
+    expect((await api('POST', '/api/activity/clear')).status).toBe(200);
+    expect(await kinds()).toEqual([]);
+    expect(await loadActivity(p)).toEqual([]);
   });
 
   it('dismisses a notice and forgets a device', async () => {

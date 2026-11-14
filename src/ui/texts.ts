@@ -79,6 +79,12 @@ const en = {
   dismiss: 'Allow again',
   onNetwork: (n: number) => `On the network · ${n}`,
   offNetwork: (n: number) => `Not on the network · ${n}`,
+  searchDevices: 'Search devices',
+  filterLabel: 'Show devices',
+  filterAll: 'All devices',
+  noMatch: 'No matching devices',
+  resetFilter: 'Show all devices',
+  needUpdate: (n: number) => `${n} ${n === 1 ? 'needs' : 'need'} an update`,
   nothingFound: 'No devices found yet',
   nothingFoundText:
     'Devices show up here while their WiFi is on. For a receiver, power it with the radio off and wait about a minute. For a transmitter module, turn on WiFi in the ELRS Lua script. A device joins your home network only once you’ve entered that network on the device’s web page. Until then it opens its own network, “ExpressLRS RX” or “ExpressLRS TX”.',
@@ -104,6 +110,9 @@ const en = {
   ownBuildText: (tag: string) =>
     `The app never updates a custom build automatically. If this build is newer than ${tag}, flashing ${tag} can reset the device’s settings (e.g. model match, outputs, protocol). The binding phrase and WiFi stay.`,
   newerText: 'The app never takes a device back to an older version.',
+  backIn: 'Back on the network in about',
+  backLate: 'Taking a bit longer than expected',
+  notBack: 'Not back yet. Check your receiver. The app confirms the update as soon as it’s back on the network.',
   unconfirmedText: (tag: string) =>
     `Updated to ${tag}. The update is confirmed once the device is back on the network. Keep the radio off; the device’s WiFi comes on after about a minute.`,
   unconfirmedTextTx: (tag: string) =>
@@ -124,7 +133,19 @@ const en = {
     reboot: 'Device is restarting …',
   } satisfies Record<FlashStep, string>,
 
-  activityEmpty: 'Nothing has happened yet.',
+  activityEmpty: 'Nothing happened in the last 30 days.',
+  clearActivity: 'Clear activity',
+  clearActivityTitle: 'Clear all activity?',
+  clearActivityText: 'This removes every entry from the last 30 days. Your devices and settings stay as they are.',
+  clearActivityConfirm: 'Clear',
+  today: 'Today',
+  yesterday: 'Yesterday',
+  actLaunch: {
+    app: 'ELRS Auto Flash started',
+    browser: 'Browser interface started',
+    watch: '“watch” started in the terminal',
+    update: '“update” started in the terminal',
+  },
   // a state within a line of the activity; update and queued come with the target version below
   actStates: {
     current: 'up to date',

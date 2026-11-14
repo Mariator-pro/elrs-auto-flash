@@ -17,6 +17,7 @@ export interface FlashPlan {
   hardwareFrom: 'targets' | 'device';
   esp8285: boolean;
   optionNames: string[]; // which options are carried over; their values are never shown
+  wifiAfter: number; // seconds after a start until the device turns its WiFi on (its "WiFi on interval")
   upload: { name: string; data: Buffer };
 }
 
@@ -69,6 +70,7 @@ export async function prepareFlash(p: Paths, ip: string, to: string, manual: boo
     hardwareFrom: hardware ? 'device' : 'targets',
     esp8285: files.esp8285,
     optionNames: Object.keys(options).sort(),
+    wifiAfter: wifiAfter(options),
     upload: uploadFile(image, files.esp8285),
   };
 }
@@ -77,10 +79,16 @@ export type FlashResult =
   | { result: 'done'; version: string } // back on the network with the new version
   // not seen again in time, e.g. because its transmitter is on; or not waited for (check): a transmitter
   // module, whose WiFi is off after the restart, or a device left to be confirmed when it is seen again
-  | { result: 'unconfirmed'; check?: 'wifi-off' | 'later' }
+  | { result: 'unconfirmed'; check?: 'wifi-off' | 'later'; wifiAfter?: number }
   | { result: 'wrong-version'; version: string } // back, but still another version
   | { result: 'mismatch'; message: string } // the device refused the file for its target
   | { result: 'failed'; message: string; code?: MsgCode; params?: MsgParams }; // upload error or connection lost
+
+// The device's "WiFi on interval" in seconds, 60 unless it has a valid one of its own.
+export function wifiAfter(options: Record<string, unknown>): number {
+  const s = options['wifi-on-interval'];
+  return typeof s === 'number' && Number.isFinite(s) && s > 0 && s <= 3600 ? s : 60;
+}
 
 // Right after the upload a device may still answer with its old version, from before its restart.
 export const STALE_MS = 30_000;
@@ -106,7 +114,7 @@ export async function runFlash(plan: FlashPlan, deps: RunDeps = {}): Promise<Fla
   if (up.status === 'error') return { result: 'failed', message: up.message, ...(up.code && { code: up.code }), ...(up.params && { params: up.params }) };
 
   if (plan.device.type === 'tx') return { result: 'unconfirmed', check: 'wifi-off' };
-  if (deps.wait === false) return { result: 'unconfirmed', check: 'later' };
+  if (deps.wait === false) return { result: 'unconfirmed', check: 'later', wifiAfter: plan.wifiAfter };
 
   deps.onStep?.('reboot');
   const waitMs = deps.waitMs ?? 180_000;

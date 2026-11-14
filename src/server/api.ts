@@ -100,6 +100,7 @@ export interface DeviceView {
   state: WatchState;
   notice?: Message & { kind: 'mismatch' | 'failed' };
   unconfirmedTo?: string; // flashed to this version, not seen since
+  backBy?: { from: string; until: string }; // a receiver after its upload: when it should be back on the network
   unsupportedReason?: Message; // why the target version cannot be flashed onto it
   step?: { step: FlashStep; percent?: number }; // while it is being flashed
   lastAttempt?: { to: string; outcome: FlashOutcome }; // the last flash stopped or failed; until the next one, or the device is up to date
@@ -133,11 +134,16 @@ export interface StateView {
   devices: DeviceView[];
 }
 
+// "Activity" is kept this many days, and at most this many lines.
+export const ACTIVITY_DAYS = 30;
+export const ACTIVITY_MAX = 5000;
+
 // One line of the "Activity" page; translated in the interface. `to` is the target version then.
 // A flash takes two lines, its start (with the version before) and its result; its steps only show
 // on the device's card. 'target': the target version changed (not at the start), then the devices'
-// new states follow.
+// new states follow. 'launch': the app, the browser interface or a command in the terminal started.
 export type ActivityEntry = { id: number; at: string; key?: string; name?: string } & (
+  | { type: 'launch'; by: 'app' | 'browser' | 'watch' | 'update' }
   | { type: 'found' | 'back'; version?: string; state: WatchState; to?: string }
   | { type: 'left' }
   | { type: 'state'; state: WatchState; to?: string }

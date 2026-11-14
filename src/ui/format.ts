@@ -8,6 +8,17 @@ export const dateTime = (iso: string, locale: string) =>
 // Local time of day, e.g. 17:58
 export const time = (iso: string, locale: string) => new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
 
+// The day as a heading: today, yesterday, else its date (with the year only when it isn't this year's).
+export function dayHeading(iso: string, t: Texts, now = new Date()): string {
+  const d = new Date(iso);
+  const yesterday = new Date(now);
+  yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === now.toDateString()) return t.today;
+  if (d.toDateString() === yesterday.toDateString()) return t.yesterday;
+  const year = d.getFullYear() === now.getFullYear() ? undefined : 'numeric';
+  return d.toLocaleDateString(t.locale, { weekday: 'long', day: 'numeric', month: 'long', year });
+}
+
 // Today only the time, else date and time.
 export const when = (iso: string, locale: string) =>
   new Date(iso).toDateString() === new Date().toDateString() ? time(iso, locale) : dateTime(iso, locale);

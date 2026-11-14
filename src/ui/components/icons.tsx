@@ -20,6 +20,13 @@ function Svg({ size = 18, className, children }: IconProps & { children: React.R
   );
 }
 
+export const PowerIcon = (p: IconProps) => (
+  <Svg {...p}>
+    <path d="M12 3v9" />
+    <path d="M6.3 6.3a8 8 0 1 0 11.4 0" />
+  </Svg>
+);
+
 export const BoltIcon = (p: IconProps) => (
   <Svg {...p}>
     <path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z" />
