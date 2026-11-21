@@ -76,7 +76,7 @@ export function DeviceCard(props: {
   const newer = target && (d.state === 'update' || d.state === 'queued' || d.state === 'flashing' || d.state === 'unconfirmed');
   const address = [d.ip, d.mac].filter(Boolean).join(' · ');
   return (
-    <Card className={d.online ? 'search-hit' : 'opacity-70'}>
+    <Card className={d.online ? undefined : 'opacity-70'}>
       {d.state === 'flashing' && <span ref={ring} className="flash-ring" aria-hidden="true" />}
       {d.state === 'unconfirmed' && (
         <svg className="wait-edge" aria-hidden="true">
@@ -125,7 +125,7 @@ export function DeviceCard(props: {
                 if (e.key === 'Escape') setEditing(undefined);
               }}
             >
-              <Input placeholder={t.namePlaceholder} maxLength={MAX_NAME} autoFocus />
+              <Input variant="secondary" placeholder={t.namePlaceholder} maxLength={MAX_NAME} autoFocus />
             </TextField>
             <Button size="sm" type="submit">
               {t.save}

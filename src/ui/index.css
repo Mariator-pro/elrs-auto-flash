@@ -32,8 +32,7 @@ body {
 }
 
 /* Animation behind the devices while the app looks for them, one of three chosen in the settings. All parts
-   run on the same clock (set in SearchBackground), so a card on the network lights up when the animation
-   reaches it. With reduced motion only the still parts stay. */
+   run on the same clock (set in SearchBackground). With reduced motion only the still parts stay. */
 /* how far a wave has run, 0 to 1; the keyframes hold no var(), Chrome keeps those from the start */
 @property --search-p {
   syntax: '<number>';
@@ -155,28 +154,6 @@ body {
   }
 }
 
-[data-search] .search-hit::after {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  pointer-events: none;
-  opacity: 0;
-  box-shadow:
-    0 0 0 1.5px var(--search-line),
-    0 0 28px var(--search-a1);
-  animation: search-hit var(--search-period, 6s) linear var(--search-delay, 0s) infinite;
-}
-@keyframes search-hit {
-  0% {
-    opacity: 1;
-  }
-  18%,
-  100% {
-    opacity: 0;
-  }
-}
-
 /* A ring runs out of the card of the device being updated, on the beat of the bolt in the sidebar
    (same timing as animate-ping); 6px stays inside the 12px gap between cards. */
 .flash-ring {
@@ -234,8 +211,7 @@ body {
   .search-beam,
   .search-wave,
   .search-dots-lit,
-  .search-band,
-  [data-search] .search-hit::after {
+  .search-band {
     display: none;
   }
 }

@@ -1,4 +1,4 @@
-# ELRS Auto Flash
+# ELRS Auto Flash _(elrs-auto-flash)_
 
 ![ELRS Auto Flash: ExpressLRS firmware updates over WiFi](docs/banner.png)
 
@@ -10,7 +10,16 @@ Desktop app for macOS, Windows and Linux, in English and German (chosen at the b
 
 **Early version:** finding devices, showing which ones have an update, updating on request and auto update all work. The app builds the same firmware file as the ExpressLRS tools and has been tested on a RadioMaster RP4TD (ESP32 receiver), a RadioMaster RP1 (ESP8285 receiver) and a transmitter module.
 
-## What it does
+## 📚 Table of Contents
+
+- [What it does](#-what-it-does)
+- [Install](#-install)
+- [Usage](#-usage)
+- [Your data](#-your-data)
+- [More documentation](#-more-documentation)
+- [License](#-license)
+
+## 🎯 What it does
 
 - **Finds your devices** on the home WiFi, also where mDNS is blocked, and shows each one with its firmware version and whether an update is available.
 - **Updates them over WiFi**, with one click per device, or automatically with auto update on: as soon as a newer version is out, each device is updated the next time it shows up.
@@ -26,7 +35,7 @@ It is careful by design:
 - A custom build (one that reports a branch name instead of a version) is only flashed when you click "Flash … anyway" on it.
 - Firmware that a device reports as not matching its hardware is never forced onto it.
 
-## Install
+## 📥 Install
 
 Download the app from the [Releases](https://github.com/Mariator-pro/elrs-auto-flash/releases) page:
 
@@ -54,7 +63,7 @@ On start the app looks for a newer release and shows it at the top left:
 - **Windows (portable)**: "Download" opens the release page; unzip the new version and delete the old folder.
 - **macOS**: "Download" opens the release page. Install the new version like the first one; the app replaces the old one in Applications. macOS accepts an in-place update only for apps signed with an Apple certificate, which this one is not.
 
-## Using it
+## ✨ Usage
 
 ### 1. Choose the target version
 
@@ -119,12 +128,12 @@ In the app:
 - **Release candidates**: devices also get release candidates, the test versions before a new version comes out. They can have bugs; turning this off later doesn't take any device back to an older version.
 - **Firmware archives**: the firmware of each version is downloaded once (about 30 MB) and kept on the computer; archives of versions no longer needed are removed. "Open folder" shows them.
 - **Remember Web Flasher entries**: see [Web Flasher](#6-web-flasher).
-- **Search animation**: what moves behind the Devices page while the app looks for devices: a light band (the default), radio waves, a radar, or nothing with "Off". A device's card lights up when the animation reaches it. With reduced motion turned on in your system, it stands still.
+- **Search animation**: what moves behind the Devices page while the app looks for devices: a light band (the default), radio waves, a radar, or nothing with "Off". With reduced motion turned on in your system, it stands still.
 - **About**: the version, a link to the app's MIT license and its source code, and "Show licenses" with the licenses of all open source packages inside the app.
 
 "Check for updates" at the bottom of the sidebar asks GitHub for new ExpressLRS versions right away; otherwise the app does this by itself every 6 hours. Appearance (light or dark) and language are chosen there as well.
 
-## Your data on the computer
+## 💾 Your data
 
 Settings, the last list of versions, the known devices, the activity of the last 30 days and the firmware archives are kept in:
 
@@ -132,7 +141,7 @@ Settings, the last list of versions, the known devices, the activity of the last
 - Windows: `%LOCALAPPDATA%\ELRS Auto Flash\`
 - Linux: `~/.local/share/elrs-auto-flash/` (or `$XDG_DATA_HOME`)
 
-## More documentation
+## 📖 More documentation
 
 You do not need any of this to use the app. It is for those who want to go further:
 
@@ -140,6 +149,6 @@ You do not need any of this to use the app. It is for those who want to go furth
 - [Command line](docs/command-line.md): finding, updating and watching devices from the terminal
 - [Development](docs/development.md): running from source, building the app and making a release
 
-## License
+## 📄 License
 
 Released under the [MIT License](LICENSE). The app bundles open source packages under their own licenses, listed under Settings, About, "Show licenses" and in `THIRD_PARTY_LICENSES.txt` in the app's resources folder. Electron's own license files (`LICENSE.electron.txt`, `LICENSES.chromium.html`) are in the same folder on macOS and in the app folder on Windows and Linux.

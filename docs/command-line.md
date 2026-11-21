@@ -63,4 +63,4 @@ npm run cli -- dismiss A1B2C3D4E5F6
 
 `forget` removes a device from the list of known devices (for example one you no longer own); it is added again when it is found. `rename <device> "5 inch freestyle"` gives a device its own name (`""` removes it), which `list`, `watch` and the interface show next to its Lua name and the other commands accept. These take the device the same way as `update`, but only look in the list of known devices, not on the network.
 
-The command line uses the same [data folder](../README.md#your-data-on-the-computer) as the app: settings, known devices and firmware archives are shared.
+The command line uses the same [data folder](../README.md#-your-data) as the app: settings, known devices and firmware archives are shared.

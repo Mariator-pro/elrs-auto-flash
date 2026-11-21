@@ -33,17 +33,6 @@ export const BoltIcon = (p: IconProps) => (
   </Svg>
 );
 
-export const AntennaIcon = (p: IconProps) => (
-  <Svg {...p}>
-    <path d="M12 20v-6" />
-    <circle cx="12" cy="12" r="2" />
-    <path d="M7.8 7.8a6 6 0 0 0 0 8.4" />
-    <path d="M16.2 16.2a6 6 0 0 0 0-8.4" />
-    <path d="M4.9 4.9a10 10 0 0 0 0 14.2" />
-    <path d="M19.1 19.1a10 10 0 0 0 0-14.2" />
-  </Svg>
-);
-
 export const DevicesIcon = (p: IconProps) => (
   <Svg {...p}>
     <rect x="3" y="3" width="7" height="7" rx="1.5" />

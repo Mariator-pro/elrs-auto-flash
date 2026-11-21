@@ -10,7 +10,7 @@ npm run build
 npm start
 ```
 
-`npm start` opens the interface in the browser. The pages work as described in the [README](../README.md#using-it). Stop it with Ctrl+C in the terminal; a running update is finished first.
+`npm start` opens the interface in the browser. The pages work as described in the [README](../README.md#-usage). Stop it with Ctrl+C in the terminal; a running update is finished first.
 
 The address it opens carries a key for this start behind `#`; without it other web pages and programs on the computer cannot use the interface, and the browser never sends it anywhere. To open the interface in another browser or window, run `npm start` again or copy the whole address the terminal shows.
 
