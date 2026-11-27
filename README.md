@@ -84,7 +84,7 @@ To join your home network instead of opening its own network ("ExpressLRS RX" or
 
 The Devices page keeps looking for devices and shows each one as a card with its version, the target version and its status: up to date, update available, newer than the target version, custom build or not supported (below ExpressLRS 3.0). Devices found before that are not on the network right now are listed below the others with the time they were last seen; "Remove from list" removes one you no longer own (it is added again when it is found).
 
-- **Update**: with auto update off, start each update with "Update to …" on the device. A custom build gets a "Flash … anyway" button, with a note on what flashing it can reset.
+- **Update**: with auto update off, start each update with "Update to …" on the device. A custom build gets a "Flash … anyway" button, which first asks and says what flashing it can reset.
 - **Names**: devices of the same kind share one name (the one the ELRS Lua script shows, e.g. RM RP4TD 2400). The pencil next to the name gives a device its own name, e.g. "5 inch freestyle"; without one, the last 4 digits of its MAC tell them apart.
 - **Notices**: a device whose firmware did not match its target, or that failed 3 times, shows a notice. Check the device, then click "Allow again" (with auto update on, the update starts again right away). A single attempt that stopped or failed shows on the card until the next one.
 
@@ -131,7 +131,7 @@ In the app:
 - **Search animation**: what moves behind the Devices page while the app looks for devices: a light band (the default), radio waves, a radar, or nothing with "Off". With reduced motion turned on in your system, it stands still.
 - **About**: the version, a link to the app's MIT license and its source code, and "Show licenses" with the licenses of all open source packages inside the app.
 
-"Check for updates" at the bottom of the sidebar asks GitHub for new ExpressLRS versions right away; otherwise the app does this by itself every 6 hours. Appearance (light or dark) and language are chosen there as well.
+"Check for updates" at the bottom of the sidebar asks GitHub for new ExpressLRS versions right away; otherwise the app does this by itself every 6 hours. Settings, appearance (light or dark) and language are there as well. Below the target version in the sidebar, "What's new" opens its release notes on GitHub.
 
 ## 💾 Your data
 

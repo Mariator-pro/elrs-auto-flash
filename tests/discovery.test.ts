@@ -6,6 +6,7 @@ import {
   looksBlocked,
   mergeDevice,
   parseMdnsResponse,
+  queryEachNetwork,
   scanAddresses,
   scanSubnet,
   type Device,
@@ -177,6 +178,25 @@ class FakeMdns extends EventEmitter implements Mdns {
     this.destroyed = true;
   }
 }
+
+describe('queryEachNetwork', () => {
+  it('sends the query through each network in turn and skips one that has gone away', async () => {
+    const steps: string[] = [];
+    const sent = await queryEachNetwork(
+      ['192.168.1.20', '172.20.0.1', '10.8.0.2'],
+      (a) => {
+        if (a === '172.20.0.1') throw new Error('EADDRNOTAVAIL');
+        steps.push(`via ${a}`);
+      },
+      async () => {
+        await new Promise((r) => setTimeout(r, 1));
+        steps.push('send');
+      },
+    );
+    expect(sent).toEqual(['192.168.1.20', '10.8.0.2']);
+    expect(steps).toEqual(['via 192.168.1.20', 'send', 'via 10.8.0.2', 'send']);
+  });
+});
 
 describe('discover', () => {
   it('finds devices via mDNS and the scan, asks mDNS-only ones for /config, and stops mDNS', async () => {

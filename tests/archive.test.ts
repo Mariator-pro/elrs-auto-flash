@@ -137,7 +137,8 @@ describe('archivesToKeep and pruneArchives', () => {
     expect(await pruneArchives(paths(await tempDir()), [])).toEqual([]);
   });
 
-  it('leaves a folder that cannot be deleted for next time, without stopping', async () => {
+  // Windows ignores the folder's mode, so the folder could be deleted there
+  it.skipIf(process.platform === 'win32')('leaves a folder that cannot be deleted for next time, without stopping', async () => {
     const p = paths(await tempDir());
     for (const name of ['4.0.1', '4.1.0']) await mkdir(join(p.firmware, name, 'x'), { recursive: true });
     // a folder in use, e.g. open on Windows: here one whose files cannot be removed

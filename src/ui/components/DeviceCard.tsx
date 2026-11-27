@@ -1,26 +1,13 @@
-import { Button, Card, Chip, Input, ProgressBar, TextField } from '@heroui/react';
+import { Button, Card, Chip, Input, Modal, ProgressBar, TextField } from '@heroui/react';
 import { useEffect, useState } from 'react';
-import { MAX_NAME, type DeviceView, type WatchState } from '../../server/api.ts';
+import { MAX_NAME, type DeviceView } from '../../server/api.ts';
 import { useBeat } from '../beat.ts';
-import { message, resultText, when } from '../format.ts';
+import { ago, dateTime, useNow } from '../dates.ts';
+import { message, resultText } from '../format.ts';
+import { macText, shortProduct, title } from '../names.ts';
+import { COLORS } from '../stateColors.ts';
 import { usePrefs } from '../usePrefs.ts';
 import { ArrowIcon, PencilIcon } from './icons.tsx';
-
-export type Color = 'default' | 'accent' | 'success' | 'warning' | 'danger';
-
-export const COLORS: Record<WatchState, Color> = {
-  current: 'success',
-  update: 'warning',
-  newer: 'default',
-  'custom-build': 'default',
-  'no-target-version': 'default',
-  unsupported: 'default',
-  unconfirmed: 'accent',
-  mismatch: 'danger',
-  failed: 'danger',
-  queued: 'default',
-  flashing: 'accent',
-};
 
 // After the expected return, how long it may still take before the card asks you to check the receiver.
 const LATE_MS = 100_000;
@@ -58,6 +45,33 @@ function BackBy({ from, until }: { from: string; until: string }) {
   );
 }
 
+// Asks before a custom build is flashed, with what it can cost.
+function OwnBuildDialog({ name, target, onConfirm, onClose }: { name: string; target: string; onConfirm: () => void; onClose: () => void }) {
+  const { t } = usePrefs();
+  return (
+    <Modal.Backdrop isOpen onOpenChange={(o) => !o && onClose()}>
+      <Modal.Container>
+        <Modal.Dialog>
+          <Modal.Header>
+            <Modal.Heading>{t.ownBuildTitle(target, name)}</Modal.Heading>
+          </Modal.Header>
+          <Modal.Body className="text-sm leading-relaxed">
+            <p className="m-0">{t.ownBuildText(target)}</p>
+          </Modal.Body>
+          <Modal.Footer>
+            <Button variant="tertiary" onPress={onClose}>
+              {t.cancel}
+            </Button>
+            <Button variant="primary" onPress={onConfirm}>
+              {t.ownBuildConfirm(target)}
+            </Button>
+          </Modal.Footer>
+        </Modal.Dialog>
+      </Modal.Container>
+    </Modal.Backdrop>
+  );
+}
+
 // One device: what it is, its version against the target, its state and what can be done about it.
 export function DeviceCard(props: {
   d: DeviceView;
@@ -71,10 +85,14 @@ export function DeviceCard(props: {
   const { d, target, autoUpdate, onUpdate, onDismiss, onForget, onRename } = props;
   const { t } = usePrefs();
   const [editing, setEditing] = useState<string>();
+  const [asking, setAsking] = useState(false);
+  const now = useNow();
   const ring = useBeat<HTMLSpanElement>(d.state === 'flashing');
   const kind = d.type === 'tx' ? t.module : d.type === 'rx' ? t.receiver : t.unknownType;
   const newer = target && (d.state === 'update' || d.state === 'queued' || d.state === 'flashing' || d.state === 'unconfirmed');
-  const address = [d.ip, d.mac].filter(Boolean).join(' · ');
+  // the technical line: Lua name, address, MAC, regulatory domain in words (the raw value in its tooltip)
+  const address = [d.device, d.ip, d.mac && macText(d.mac)].filter(Boolean).join(' · ');
+  const domains = d.domain?.split(', ');
   return (
     <Card className={d.online ? undefined : 'opacity-70'}>
       {d.state === 'flashing' && <span ref={ring} className="flash-ring" aria-hidden="true" />}
@@ -87,7 +105,7 @@ export function DeviceCard(props: {
         <div className="flex items-start justify-between gap-2.5">
           <div className="flex min-w-0 flex-col gap-1">
             <span className="flex items-start gap-1">
-              <span className="font-semibold">{d.name ?? d.product ?? d.ip}</span>
+              <span className="font-semibold">{title(d)}</span>
               <Button
                 isIconOnly
                 size="sm"
@@ -99,8 +117,7 @@ export function DeviceCard(props: {
                 <PencilIcon size={14} />
               </Button>
             </span>
-            {d.name && d.product && <span className="text-sm">{d.product}</span>}
-            <span className="text-sm text-muted">{[kind, d.device].filter(Boolean).join(' · ')}</span>
+            <span className="text-sm text-muted">{[kind, d.name && shortProduct(d.product)].filter(Boolean).join(' · ')}</span>
           </div>
           <Chip size="sm" variant="soft" color={COLORS[d.state]} className="shrink-0">
             {t.states[d.state]}
@@ -146,11 +163,24 @@ export function DeviceCard(props: {
           )}
         </div>
 
-        <span className="font-mono text-xs text-muted">
-          {d.online ? [address, d.domain].filter(Boolean).join(' · ') : `${address} · ${t.lastSeen(when(d.lastSeen, t.locale))}`}
+        <span className="text-xs text-muted">
+          <span className="font-mono">{address}</span>
+          {d.online && domains && (
+            <span className="whitespace-nowrap" title={d.domain}>
+              {' · '}
+              {domains.map((x) => t.domains[x] ?? x).join(', ')}
+            </span>
+          )}
+          {/* times in the normal font, like everywhere else */}
+          {!d.online && (
+            <span className="whitespace-nowrap tabular-nums" title={dateTime(d.lastSeen, t.locale)}>
+              {' · '}
+              {t.lastSeen(ago(d.lastSeen, t.locale, now))}
+            </span>
+          )}
         </span>
 
-        {d.online && d.state === 'custom-build' && target && <span className="text-sm leading-relaxed">{t.ownBuildText(target)}</span>}
+        {d.online && d.state === 'custom-build' && <span className="text-sm text-muted">{t.ownBuildNote}</span>}
         {d.online && d.state === 'newer' && <span className="text-sm text-muted">{t.newerText}</span>}
         {d.state === 'unconfirmed' && d.backBy && <BackBy from={d.backBy.from} until={d.backBy.until} />}
         {d.state === 'unconfirmed' && !d.backBy && d.unconfirmedTo && (
@@ -189,9 +219,20 @@ export function DeviceCard(props: {
             </Button>
           )}
           {d.online && d.state === 'custom-build' && target && (
-            <Button variant="outline" onPress={onUpdate}>
+            <Button variant="outline" onPress={() => setAsking(true)}>
               {t.flashAnyway(target)}
             </Button>
+          )}
+          {asking && target && (
+            <OwnBuildDialog
+              name={title(d)}
+              target={target}
+              onClose={() => setAsking(false)}
+              onConfirm={() => {
+                setAsking(false);
+                onUpdate();
+              }}
+            />
           )}
           {(d.state === 'mismatch' || d.state === 'failed') && (
             <Button variant="outline" onPress={onDismiss}>

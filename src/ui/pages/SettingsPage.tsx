@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import { Button, Card, ListBox, Select, Switch, ToggleButton, ToggleButtonGroup } from '@heroui/react';
 import { SEARCH_LOOKS, type SearchLook, type StateView } from '../../server/api.ts';
 import { post } from '../api.ts';
@@ -7,22 +8,35 @@ import { usePrefs } from '../usePrefs.ts';
 
 type Run = (fn: () => Promise<unknown>) => void;
 
-// One of several switches in a card, with its own label and text.
-function SwitchRow(props: { group: string; label: string; text: string; isSelected: boolean; onChange: (on: boolean) => void }) {
+// A switch at the right end of its title's line, its text below: the same in every card.
+function SwitchLine(props: { label: string; title: ReactNode; text?: ReactNode; isSelected: boolean; onChange: (on: boolean) => void }) {
   return (
-    <div className="flex items-start gap-3">
-      <Switch aria-label={`${props.group}: ${props.label}`} isSelected={props.isSelected} onChange={props.onChange}>
+    <div className="flex items-start justify-between gap-4">
+      <div className="flex min-w-0 flex-col gap-1">
+        {props.title}
+        {props.text}
+      </div>
+      <Switch aria-label={props.label} isSelected={props.isSelected} onChange={props.onChange} className="mt-0.5 shrink-0">
         <Switch.Content>
           <Switch.Control>
             <Switch.Thumb />
           </Switch.Control>
         </Switch.Content>
       </Switch>
-      <div className="flex min-w-0 flex-col text-sm leading-relaxed">
-        <span className="font-medium">{props.label}</span>
-        <span className="text-muted">{props.text}</span>
-      </div>
     </div>
+  );
+}
+
+// One of several switches in a card, with its own label and text.
+function SwitchRow(props: { group: string; label: string; text: string; isSelected: boolean; onChange: (on: boolean) => void }) {
+  return (
+    <SwitchLine
+      label={`${props.group}: ${props.label}`}
+      title={<span className="text-sm font-medium">{props.label}</span>}
+      text={<span className="text-sm leading-relaxed text-muted">{props.text}</span>}
+      isSelected={props.isSelected}
+      onChange={props.onChange}
+    />
   );
 }
 
@@ -32,7 +46,8 @@ export function SettingsPage({ state, run, onAlwaysAutoUpdate }: { state: StateV
   const save = (change: { targetMajor?: number | null; hideAutoUpdateWarning?: boolean; releaseCandidates?: boolean; rememberWebFlasher?: boolean }) =>
     run(() => post('/api/settings', change));
   return (
-    <div className="flex flex-col gap-6">
+    // the cards hold short texts and single controls, so they stay as narrow as a form
+    <div className="flex flex-col gap-6 [&>*:not(:first-child)]:max-w-3xl">
       <h1 className="m-0 text-3xl font-bold tracking-tight">{t.settings}</h1>
 
       <Card>
@@ -76,23 +91,19 @@ export function SettingsPage({ state, run, onAlwaysAutoUpdate }: { state: StateV
 
       <Card>
         <Card.Header>
-          <Card.Title>{t.releaseCandidates}</Card.Title>
-          <Card.Description>{t.rcText}</Card.Description>
+          <SwitchLine
+            label={t.releaseCandidates}
+            title={<Card.Title>{t.releaseCandidates}</Card.Title>}
+            text={<Card.Description>{t.rcText}</Card.Description>}
+            isSelected={s.releaseCandidates}
+            onChange={(on) => save({ releaseCandidates: on })}
+          />
         </Card.Header>
         {s.releaseCandidates && (
           <Card.Content>
             <p className="m-0 text-sm leading-relaxed text-warning">{t.rcWarning}</p>
           </Card.Content>
         )}
-        <Card.Footer>
-          <Switch aria-label={t.releaseCandidates} isSelected={s.releaseCandidates} onChange={(on) => save({ releaseCandidates: on })}>
-            <Switch.Content>
-              <Switch.Control>
-                <Switch.Thumb />
-              </Switch.Control>
-            </Switch.Content>
-          </Switch>
-        </Card.Footer>
       </Card>
 
       <Card>
@@ -128,7 +139,12 @@ export function SettingsPage({ state, run, onAlwaysAutoUpdate }: { state: StateV
       {state.desktop && (
         <Card id="remember-web-flasher">
           <Card.Header>
-            <Card.Title>{t.rememberWebFlasher}</Card.Title>
+            <SwitchLine
+              label={t.rememberWebFlasher}
+              title={<Card.Title>{t.rememberWebFlasher}</Card.Title>}
+              isSelected={s.rememberWebFlasher}
+              onChange={(on) => save({ rememberWebFlasher: on })}
+            />
           </Card.Header>
           <Card.Content>
             <dl className="m-0 grid grid-cols-[auto_1fr] gap-x-2 gap-y-1 text-sm leading-relaxed text-muted">
@@ -138,15 +154,6 @@ export function SettingsPage({ state, run, onAlwaysAutoUpdate }: { state: StateV
               <dd className="m-0">{t.rememberWebFlasherOff}</dd>
             </dl>
           </Card.Content>
-          <Card.Footer>
-            <Switch aria-label={t.rememberWebFlasher} isSelected={s.rememberWebFlasher} onChange={(on) => save({ rememberWebFlasher: on })}>
-              <Switch.Content>
-                <Switch.Control>
-                  <Switch.Thumb />
-                </Switch.Control>
-              </Switch.Content>
-            </Switch>
-          </Card.Footer>
         </Card>
       )}
 

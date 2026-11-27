@@ -1,13 +1,6 @@
 import type { FlashOutcome, Message } from '../server/api.ts';
 import type { Texts } from './texts.ts';
 
-// Local date and time, e.g. 25.10.2026, 17:58
-export const dateTime = (iso: string, locale: string) =>
-  new Date(iso).toLocaleString(locale, { dateStyle: 'medium', timeStyle: 'short' });
-
-// Local time of day, e.g. 17:58
-export const time = (iso: string, locale: string) => new Date(iso).toLocaleTimeString(locale, { hour: '2-digit', minute: '2-digit' });
-
 // The day as a heading: today, yesterday, else its date (with the year only when it isn't this year's).
 export function dayHeading(iso: string, t: Texts, now = new Date()): string {
   const d = new Date(iso);
@@ -18,10 +11,6 @@ export function dayHeading(iso: string, t: Texts, now = new Date()): string {
   const year = d.getFullYear() === now.getFullYear() ? undefined : 'numeric';
   return d.toLocaleDateString(t.locale, { weekday: 'long', day: 'numeric', month: 'long', year });
 }
-
-// Today only the time, else date and time.
-export const when = (iso: string, locale: string) =>
-  new Date(iso).toDateString() === new Date().toDateString() ? time(iso, locale) : dateTime(iso, locale);
 
 // A message of the server in the language of the interface; one without a code as it came.
 export const message = (m: Message, t: Texts) => (m.code && t.messages[m.code]?.(m.params ?? {})) || m.message;

@@ -18,7 +18,8 @@ import {
 } from '../src/core/known.ts';
 import { paths, writeJson } from '../src/core/paths.ts';
 import { targetRelease } from '../src/core/releases.ts';
-import { deviceLabel } from '../src/server/api.ts';
+import { deviceLabel, type DeviceView } from '../src/server/api.ts';
+import { deviceNames, macText, shortProduct } from '../src/ui/names.ts';
 import { tempDir } from './helpers.ts';
 
 const RP4TD = 'RadioMaster RP4TD True Diversity 2.4GHz RX';
@@ -168,6 +169,26 @@ describe('devices.json', () => {
     expect(device.name).toBeUndefined();
     expect(deviceLabel({ ip: '1.2.3.4' })).toBe('1.2.3.4');
     expect(deviceLabel({ ip: '1.2.3.4', product: 'Some RX' })).toBe('Some RX');
+  });
+
+  it('names a device in the interface like its card, with the end of its MAC only when the name is taken twice', () => {
+    const view = (key: string, d: Partial<DeviceView>) => ({ key, mac: key, ip: '', label: '', lastSeen: '', online: true, state: 'current', ...d }) as DeviceView;
+    const names = deviceNames([
+      view('A1B2C3D4E501', { name: 'Tiny whoop', product: 'RadioMaster RP1 2.4GHz RX' }),
+      view('A1B2C3D4E502', { product: 'RadioMaster RP1 2.4GHz RX' }),
+      view('A1B2C3D4E503', { product: 'RadioMaster RP1 2.4GHz RX' }),
+      view('A1B2C3D4E504', { product: 'HappyModel EP2 2.4GHz RX' }),
+    ]);
+    expect([...names.values()]).toEqual(['Tiny whoop', 'RadioMaster RP1 · E502', 'RadioMaster RP1 · E503', 'HappyModel EP2']);
+  });
+
+  it('shortens 2.4 GHz products only and writes a MAC with colons', () => {
+    expect(shortProduct('RadioMaster RP1 2.4GHz RX')).toBe('RadioMaster RP1');
+    expect(shortProduct('RadioMaster Ranger Micro 2.4GHz TX')).toBe('RadioMaster Ranger Micro');
+    expect(shortProduct('BETAFPV SuperP 900MHz RX')).toBe('BETAFPV SuperP 900MHz RX');
+    expect(shortProduct(undefined)).toBeUndefined();
+    expect(macText('a1b2c3d4e5f6')).toBe('A1:B2:C3:D4:E5:F6');
+    expect(macText('A1:B2:C3:D4:E5:F6')).toBe('A1:B2:C3:D4:E5:F6');
   });
 
   it('finds devices by address, MAC with or without colons, Lua name or product name', () => {

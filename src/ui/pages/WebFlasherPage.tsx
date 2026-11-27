@@ -22,11 +22,12 @@ async function reachable(): Promise<boolean> {
 export function WebFlasherPage({ hidden, remember, onSettings }: { hidden: boolean; remember?: boolean; onSettings: () => void }) {
   const { t } = usePrefs();
   const [status, setStatus] = useState<'checking' | 'ok' | 'offline'>('checking');
+  const probe = () => void reachable().then((ok) => setStatus(ok ? 'ok' : 'offline'));
   const check = () => {
     setStatus('checking');
-    void reachable().then((ok) => setStatus(ok ? 'ok' : 'offline'));
+    probe();
   };
-  useEffect(check, []);
+  useEffect(probe, []);
 
   return (
     <div className={hidden ? 'hidden' : 'flex flex-1 flex-col gap-6'}>

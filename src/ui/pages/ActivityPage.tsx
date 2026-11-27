@@ -1,11 +1,13 @@
 import { Button, Card, Chip, Modal } from '@heroui/react';
 import { useState } from 'react';
-import type { ActivityEntry, WatchState } from '../../server/api.ts';
+import type { ActivityEntry, DeviceView, WatchState } from '../../server/api.ts';
 import { groupActivity, type ActivityItem } from '../activity.ts';
 import { post } from '../api.ts';
-import { COLORS, type Color } from '../components/DeviceCard.tsx';
+import { COLORS, type Color } from '../stateColors.ts';
 import { AlertIcon, ArrowIcon, CheckIcon, CrossIcon, PowerIcon, SearchIcon, TargetIcon } from '../components/icons.tsx';
-import { dayHeading, message, resultText, time } from '../format.ts';
+import { time } from '../dates.ts';
+import { dayHeading, message, resultText } from '../format.ts';
+import { deviceNames } from '../names.ts';
 import type { Texts } from '../texts.ts';
 import { usePrefs } from '../usePrefs.ts';
 
@@ -69,28 +71,36 @@ function Dot({ item }: { item: ActivityItem }) {
   );
 }
 
-function Line({ item }: { item: Extract<ActivityItem, { kind: 'line' }> }) {
+// The name of an entry's device as the cards call it now; a device no longer known keeps the name stored with the entry.
+type NameOf = (a: ActivityEntry) => string | undefined;
+
+function Line({ item, nameOf }: { item: Extract<ActivityItem, { kind: 'line' }>; nameOf: NameOf }) {
   const { t } = usePrefs();
   const a = item.entry;
   const to = a.type === 'result' && a.outcome.result !== 'stopped' ? a.to : undefined;
+  const versions = !!(item.from && to);
+  // with the versions shown, a done update says only that; what went wrong shows in red
+  const done = a.type === 'result' && a.outcome.result === 'done';
+  const text = done && versions ? (a.later ? t.resultConfirmedShort : t.resultUpdated) : line(a, t);
+  const color = done && versions ? 'text-success' : tone(item) === 'danger' ? 'text-danger' : a.name ? 'text-muted' : undefined;
   return (
     <div className="flex flex-col gap-1 pt-0.5">
-      {a.name && <span className="font-semibold">{a.name}</span>}
+      {a.name && <span className="font-semibold">{nameOf(a)}</span>}
       <span className="flex flex-wrap items-center gap-2 text-sm leading-relaxed">
-        {item.from && to && (
+        {versions && (
           <span className="flex items-center gap-1.5 font-mono text-xs">
             <span className="rounded-md bg-surface-secondary px-1.5 py-0.5 text-muted">{item.from}</span>
             <ArrowIcon size={14} className="text-muted" />
             <span className="rounded-md bg-surface-secondary px-1.5 py-0.5">{to}</span>
           </span>
         )}
-        <span className={a.name ? 'text-muted' : undefined}>{line(a, t)}</span>
+        <span className={color}>{text}</span>
       </span>
     </div>
   );
 }
 
-function Wave({ item }: { item: Extract<ActivityItem, { kind: 'wave' }> }) {
+function Wave({ item, nameOf }: { item: Extract<ActivityItem, { kind: 'wave' }>; nameOf: NameOf }) {
   const { t } = usePrefs();
   const [open, setOpen] = useState(false);
   const n = item.entries.length;
@@ -118,7 +128,7 @@ function Wave({ item }: { item: Extract<ActivityItem, { kind: 'wave' }> }) {
         <ul className="m-0 flex list-none flex-col gap-2 rounded-xl bg-surface-secondary p-3 text-sm">
           {item.entries.map((e) => (
             <li key={e.id} className="flex flex-wrap justify-between gap-x-3">
-              <span>{e.name}</span>
+              <span>{nameOf(e)}</span>
               <span className="text-muted">{line(e, t)}</span>
             </li>
           ))}
@@ -155,8 +165,11 @@ function ClearDialog({ onConfirm, onClose }: { onConfirm: () => void; onClose: (
   );
 }
 
-export function ActivityPage({ activity, run }: { activity: ActivityEntry[]; run: (fn: () => Promise<unknown>) => void }) {
+export function ActivityPage(props: { activity: ActivityEntry[]; devices: DeviceView[]; run: (fn: () => Promise<unknown>) => void }) {
+  const { activity, devices, run } = props;
   const { t } = usePrefs();
+  const names = deviceNames(devices);
+  const nameOf: NameOf = (a) => (a.key && names.get(a.key)) || a.name;
   const [asking, setAsking] = useState(false);
   const groups = groupActivity(activity);
   const day = (iso: string) => new Date(iso).toDateString();
@@ -194,12 +207,12 @@ export function ActivityPage({ activity, run }: { activity: ActivityEntry[]; run
                     ]
                   : []),
                 <li key={g.at} className="flex gap-5 border-b border-separator px-5 py-4 last:border-b-0">
-                  <span className="w-12 shrink-0 pt-1.5 font-mono text-xs text-muted">{time(g.at, t.locale)}</span>
+                  <span className="w-16 shrink-0 pt-1.5 text-xs whitespace-nowrap text-muted tabular-nums">{time(g.at, t.locale)}</span>
                   <ul className="m-0 flex min-w-0 flex-1 list-none flex-col gap-4 p-0">
                     {g.items.map((item) => (
                       <li key={item.kind === 'line' ? item.entry.id : (item.target ?? item.entries[0]!).id} className="flex items-start gap-3">
                         <Dot item={item} />
-                        {item.kind === 'line' ? <Line item={item} /> : <Wave item={item} />}
+                        {item.kind === 'line' ? <Line item={item} nameOf={nameOf} /> : <Wave item={item} nameOf={nameOf} />}
                       </li>
                     ))}
                   </ul>

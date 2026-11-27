@@ -1,4 +1,5 @@
 import makeMdns from 'multicast-dns';
+import { createSocket } from 'node:dgram';
 import { isIPv4 } from 'node:net';
 import { printable, readConfig, type DeviceInfo, type DeviceType } from './device.ts';
 import { ipv4Networks, type Ipv4Network } from '../platform/network.ts';
@@ -23,7 +24,7 @@ export interface MdnsPacket {
 }
 export interface Mdns {
   on(event: 'response', listener: (packet: MdnsPacket, rinfo: { address: string }) => void): unknown;
-  query(query: { questions: { name: string; type: string }[] }): unknown;
+  query(query: { questions: { name: string; type: 'PTR' }[] }): unknown;
   destroy(): unknown;
 }
 
@@ -92,11 +93,54 @@ export function parseMdnsResponse(packet: MdnsPacket, from: string, networks: Ip
   return devices;
 }
 
+// Sends one query through each of the given networks, one after the other: on its own, the system sends
+// multicast through one network only, which with a VPN, WSL or Docker may not be the one with the devices.
+// A network that has gone away is skipped. Returns the addresses the query went out from.
+export async function queryEachNetwork(addresses: string[], via: (address: string) => void, send: () => Promise<void>): Promise<string[]> {
+  const sent: string[] = [];
+  for (const address of addresses) {
+    try {
+      via(address);
+    } catch {
+      continue;
+    }
+    await send();
+    sent.push(address);
+  }
+  return sent;
+}
+
+// multicast-dns on a socket of our own, so each query can go out through every network of the computer.
+function systemMdns(): Mdns {
+  const socket = createSocket({ type: 'udp4', reuseAddr: true });
+  const mdns = makeMdns({ socket });
+  const ready = new Promise<void>((resolve) => mdns.once('ready', () => resolve()));
+  let busy = false;
+  return {
+    on: (event: 'response', listener: (packet: MdnsPacket, rinfo: { address: string }) => void) => mdns.on(event, listener),
+    query: (query) => {
+      if (busy) return;
+      busy = true;
+      const addresses = ipv4Networks().map((n) => n.address);
+      void ready
+        .then(() =>
+          queryEachNetwork(
+            addresses,
+            (a) => socket.setMulticastInterface(a),
+            () => new Promise<void>((resolve) => mdns.query(query, () => resolve())),
+          ),
+        )
+        .finally(() => (busy = false));
+    },
+    destroy: () => mdns.destroy(),
+  };
+}
+
 // Listens for ELRS devices via mDNS and asks for them right away and then every queryEveryMs.
 export function browseMdns(
   onDevice: (d: Device) => void,
   queryEveryMs = 5000,
-  create: () => Mdns = () => makeMdns() as unknown as Mdns,
+  create: () => Mdns = systemMdns,
 ): { stop: () => void } {
   const mdns = create();
   mdns.on('response', (packet, rinfo) => parseMdnsResponse(packet, rinfo.address).forEach(onDevice));

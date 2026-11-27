@@ -5,7 +5,9 @@ import { post } from '../api.ts';
 import { DeviceCard } from '../components/DeviceCard.tsx';
 import { SearchIcon } from '../components/icons.tsx';
 import { SearchBackground } from '../components/SearchBackground.tsx';
-import { message, sentence, time } from '../format.ts';
+import { time } from '../dates.ts';
+import { message, sentence } from '../format.ts';
+import { deviceNames, macText } from '../names.ts';
 import { usePrefs } from '../usePrefs.ts';
 
 type Run = (fn: () => Promise<unknown>) => void;
@@ -36,7 +38,7 @@ export function DevicesPage({ state, run, onSettings }: { state: StateView; run:
   const [query, setQuery] = useState('');
   const [filter, setFilter] = useState<Filter>('all');
   const q = query.trim().toLowerCase();
-  const found = state.devices.filter((d) => !q || [d.name, d.label, d.product, d.device, d.target, d.ip, d.mac].some((v) => v?.toLowerCase().includes(q)));
+  const found = state.devices.filter((d) => !q || [d.name, d.label, d.product, d.device, d.target, d.ip, d.mac, d.mac && macText(d.mac)].some((v) => v?.toLowerCase().includes(q)));
   const fits = (d: DeviceView, f: Filter) => f === 'all' || (f === 'update' ? UPDATING.includes(d.state) : d.state === 'current');
   const shown = found.filter((d) => fits(d, filter));
   // choices without a device for the current search stay in the list, greyed out
@@ -45,6 +47,7 @@ export function DevicesPage({ state, run, onSettings }: { state: StateView; run:
   const away = sorted(shown.filter((d) => !d.online));
   const awayUpdates = away.filter((d) => d.state === 'update').length;
   const noticed = state.devices.filter((d) => d.notice);
+  const names = deviceNames(state.devices);
   const act = (path: string, key: string) => run(() => post(path, { key }));
   const card = (d: DeviceView) => (
     <DeviceCard
@@ -126,7 +129,7 @@ export function DevicesPage({ state, run, onSettings }: { state: StateView; run:
         <Alert key={d.key} status="danger">
           <Alert.Indicator />
           <Alert.Content>
-            <Alert.Title>{d.notice!.kind === 'mismatch' ? t.noticeMismatch(d.label) : t.noticeFailed(d.label)}</Alert.Title>
+            <Alert.Title>{d.notice!.kind === 'mismatch' ? t.noticeMismatch(names.get(d.key)!) : t.noticeFailed(names.get(d.key)!)}</Alert.Title>
             <Alert.Description>{d.notice!.kind === 'mismatch' ? t.noticeMismatchText : t.noticeFailedText(sentence(message(d.notice!, t)))}</Alert.Description>
           </Alert.Content>
           <Button variant="outline" onPress={() => act('/api/devices/dismiss', d.key)}>

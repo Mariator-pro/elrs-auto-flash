@@ -40,7 +40,7 @@ export function App() {
         onCheck={() => run(() => post('/api/check'))}
         onAppUpdate={() => run(() => post('/api/app-update'))}
       />
-      <main className="box-border flex min-w-0 flex-[999_1_640px] flex-col gap-6 p-7">
+      <main className="box-border flex min-w-0 flex-[999_1_640px] flex-col gap-6 p-7 [&>*]:max-w-6xl">
         {!connected && (
           <Alert status="warning">
             <Alert.Indicator />
@@ -65,7 +65,7 @@ export function App() {
         {page === 'web-flasher' ? null : !state ? (
           <Spinner />
         ) : page === 'activity' ? (
-          <ActivityPage activity={activity} run={run} />
+          <ActivityPage activity={activity} devices={state.devices} run={run} />
         ) : page === 'settings' ? (
           <SettingsPage
             state={state}
