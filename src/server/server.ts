@@ -336,8 +336,9 @@ export async function startServer(o: ServerOptions): Promise<RunningServer> {
       const s = await loadSettings(p);
       s.ui = { ...s.ui };
       if (typeof b.lang === 'string' && /^[a-z]{2}$/.test(b.lang)) s.ui.lang = b.lang;
-      if (b.theme === 'light' || b.theme === 'dark') s.ui.theme = b.theme;
+      if (b.theme === 'system' || b.theme === 'light' || b.theme === 'dark') s.ui.theme = b.theme;
       if (SEARCH_LOOKS.includes(b.search!)) s.ui.search = b.search;
+      if (typeof b.sidebarCollapsed === 'boolean') s.ui.sidebarCollapsed = b.sidebarCollapsed;
       await saveSettings(p, s);
       settings = s;
     },

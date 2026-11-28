@@ -16,7 +16,8 @@ export interface ReleaseList {
 
 const RELEASES_URL = 'https://api.github.com/repos/ExpressLRS/ExpressLRS/releases?per_page=100';
 const HEADERS = { Accept: 'application/vnd.github+json', 'User-Agent': 'elrs-auto-flash' };
-export const CHECK_EVERY_MS = 6 * 60 * 60 * 1000;
+// an hour, so a new version shows up soon while the app stays open; GitHub allows 60 requests an hour without a token
+export const CHECK_EVERY_MS = 60 * 60 * 1000;
 
 interface ApiRelease {
   tag_name: string;

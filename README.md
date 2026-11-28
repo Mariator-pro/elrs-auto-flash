@@ -4,11 +4,11 @@
 
 Keep your ExpressLRS receivers and transmitter modules up to date without updating each one by hand. Devices that join your home WiFi are found automatically and updated to the current firmware over the network, keeping their binding phrase, regulatory domain and WiFi settings.
 
-Desktop app for macOS, Windows and Linux, in English and German (chosen at the bottom of the sidebar). For advanced use, a [browser interface](docs/browser-interface.md) and a [command line tool](docs/command-line.md) are available when running from source.
+Desktop app for macOS, Windows and Linux, in English and German (chosen in Settings). For advanced use, a [browser interface](docs/browser-interface.md) and a [command line tool](docs/command-line.md) are available when running from source.
 
 ![The devices page with several receivers and a transmitter module](docs/screenshots/devices.png)
 
-**Early version:** finding devices, showing which ones have an update, updating on request and auto update all work. The app builds the same firmware file as the ExpressLRS tools and has been tested on a RadioMaster RP4TD (ESP32 receiver), a RadioMaster RP1 (ESP8285 receiver) and a transmitter module.
+The app builds the same firmware file as the ExpressLRS tools and has been tested on a RadioMaster RP4TD (ESP32 receiver), a RadioMaster RP1 (ESP8285 receiver) and a transmitter module.
 
 ## 📚 Table of Contents
 
@@ -124,14 +124,19 @@ In the app:
 
 ### 7. Settings
 
+Open the Settings page at the bottom of the sidebar (on macOS also "Settings…" in the app menu, ⌘,).
+
 - **Target version**: the major version all devices are kept on (see [step 1](#1-choose-the-target-version)).
 - **Release candidates**: devices also get release candidates, the test versions before a new version comes out. They can have bugs; turning this off later doesn't take any device back to an older version.
 - **Firmware archives**: the firmware of each version is downloaded once (about 30 MB) and kept on the computer; archives of versions no longer needed are removed. "Open folder" shows them.
 - **Remember Web Flasher entries**: see [Web Flasher](#6-web-flasher).
 - **Search animation**: what moves behind the Devices page while the app looks for devices: a light band (the default), radio waves, a radar, or nothing with "Off". With reduced motion turned on in your system, it stands still.
+- **Language**: English or German.
 - **About**: the version, a link to the app's MIT license and its source code, and "Show licenses" with the licenses of all open source packages inside the app.
 
-"Check for updates" at the bottom of the sidebar asks GitHub for new ExpressLRS versions right away; otherwise the app does this by itself every 6 hours. Settings, appearance (light or dark) and language are there as well. Below the target version in the sidebar, "What's new" opens its release notes on GitHub.
+"Check for updates" at the bottom of the sidebar asks GitHub for new ExpressLRS versions right away; otherwise the app does this by itself every hour, right at the start too. Settings and the appearance (light, dark or system) are there as well. Below the target version in the sidebar, "What's new" opens its release notes on GitHub.
+
+The button next to the app name (or Cmd+B on a Mac, Ctrl+B on Windows and Linux) collapses the sidebar to a narrow bar of icons; the app keeps this choice.
 
 ## 💾 Your data
 

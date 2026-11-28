@@ -1,5 +1,5 @@
 import { Alert, Spinner, Toast } from '@heroui/react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { errorText, post, useServer } from './api.ts';
 import { AutoUpdateDialog } from './components/AutoUpdateDialog.tsx';
 import { Sidebar, type Page } from './components/Sidebar.tsx';
@@ -9,6 +9,7 @@ import { notify } from './notify.ts';
 import { SettingsPage } from './pages/SettingsPage.tsx';
 import { WebFlasherPage } from './pages/WebFlasherPage.tsx';
 import { usePrefs } from './usePrefs.ts';
+import { OPEN_SETTINGS } from './menu.ts';
 
 export function App() {
   const { state, activity, connected } = useServer();
@@ -21,6 +22,13 @@ export function App() {
     if (target === 'web-flasher') setFlasherOpened(true);
     setPage(target);
   };
+
+  // "Settings…" in the menu bar of the desktop app (Cmd+,)
+  useEffect(() => {
+    const open = () => navigate('settings');
+    addEventListener(OPEN_SETTINGS, open);
+    return () => removeEventListener(OPEN_SETTINGS, open);
+  });
 
   const run = (fn: () => Promise<unknown>) => {
     fn().catch((e: unknown) => notify({ status: 'danger', title: t.failed, text: errorText(t, e) }));

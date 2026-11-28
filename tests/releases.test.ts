@@ -83,7 +83,7 @@ describe('targetRelease and majorVersions', () => {
 });
 
 describe('kept list of releases', () => {
-  it('asks GitHub, keeps the answer and asks again after 6 hours', async () => {
+  it('asks GitHub, keeps the answer and asks again after an hour', async () => {
     const p = paths(await tempDir());
     const gh = await github();
     const now = new Date('2026-10-25T12:00:00Z');

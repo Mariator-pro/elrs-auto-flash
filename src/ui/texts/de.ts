@@ -1,7 +1,7 @@
 import type { MessageCode, MessageParams } from '../../server/api.ts';
 import type { Texts } from '../texts.ts';
 
-const PART: Record<string, string> = { 'product name': 'Produktname', 'device name': 'Gerätename', options: 'Optionen', 'hardware layout': 'Hardware-Belegung' };
+const PART: Record<string, string> = { 'product name': 'Produktname', 'device name': 'Gerätename', options: 'Optionen des Geräts', 'hardware layout': 'Hardware-Belegung' };
 
 export const de: Texts = {
   locale: 'de-DE',
@@ -12,7 +12,7 @@ export const de: Texts = {
   autoOff: 'Updates startest du einzeln am jeweiligen Gerät mit „Aktualisieren“.',
   autoDialogTitle: 'Autoupdate einschalten?',
   autoDialogTitleAlways: 'Autoupdate dauerhaft einschalten?',
-  autoDialogAlways: 'Das gilt auch nach jedem Start der App, ohne dass du etwas anklickst. Der Schalter verschwindet aus der Seitenleiste, ausschalten kannst du das in den Einstellungen.',
+  autoDialogAlways: 'Das gilt auch nach jedem Start der App, ohne dass du etwas anklickst. Der Schalter verschwindet aus der Seitenleiste, ausschalten kannst du das in den Optionen.',
   autoDialogText: 'Die App aktualisiert alle Empfänger und Sendemodule, die sie im Heimnetz findet, automatisch und ohne Rückfrage auf die Zielversion.',
   autoDialogKept: 'Diese Einstellungen bleiben erhalten:',
   autoDialogKeptList: [
@@ -34,21 +34,30 @@ export const de: Texts = {
   overview: 'Übersicht',
   devices: 'Geräte',
   activity: 'Aktivität',
-  settings: 'Einstellungen',
+  settings: 'Optionen',
   theme: 'Darstellung',
   light: 'Hell',
   dark: 'Dunkel',
+  systemTheme: 'System',
+  switchTheme: (next) => `Wechselt zu „${next}“.`,
+  ctrlKey: 'Strg',
+  collapseSidebar: 'Seitenleiste einklappen',
+  expandSidebar: 'Seitenleiste aufklappen',
+  sidebarShort: { devices: 'Geräte', activity: 'Aktivität', 'web-flasher': 'Flasher', settings: 'Optionen', target: 'Ziel' },
   language: 'Sprache',
+  languageText: 'Für alle Seiten und Meldungen der App.',
   releasesChecked: 'Zuletzt geprüft:',
   notChecked: 'Noch nicht geprüft',
   checking: 'Wird geprüft …',
   checkUpdates: 'Nach Updates suchen',
   updatesReady: (n) => `Updates für ${n} ${n === 1 ? 'Gerät' : 'Geräte'}`,
   appUpdateAvailable: (v) => `ELRS Auto Flash ${v} ist verfügbar`,
-  appDownloading: (pct) => `Update wird geladen … ${pct} %`,
+  appDownloading: (pct) => `Update wird geladen … ${pct}\u00a0%`,
   appRestarting: 'Startet neu …',
   appUpdateInstall: 'Aktualisieren',
   appUpdateDownload: 'Herunterladen',
+  appUpdateClick: 'Klicken zum Aktualisieren.',
+  appUpdateLink: 'Öffnet die Download-Seite.',
 
   noServer: 'ELRS Auto Flash ist nicht erreichbar',
   startServer: 'Starte es im Terminal mit „npm start“.',
@@ -60,7 +69,7 @@ export const de: Texts = {
   noTargetText: 'Die App aktualisiert kein Gerät, bis du die Hauptversion wählst, mit der deine Sender laufen.',
   chooseTarget: 'Zielversion wählen',
   newerMajorTitle: (n) => `ExpressLRS ${n}.x ist erschienen`,
-  newerMajorText: (n) => `Sender und Empfänger brauchen dieselbe Hauptversion. Stelle in den Einstellungen auf ${n}.x um, sobald deine Sender damit laufen.`,
+  newerMajorText: (n) => `Sender und Empfänger brauchen dieselbe Hauptversion. Stelle in den Optionen auf ${n}.x um, sobald deine Sender damit laufen.`,
   blockedTitle: 'Kein Zugriff aufs lokale Netz',
   blockedMac:
     'macOS lässt ELRS Auto Flash nicht ins lokale Netz. Schalte unter Systemeinstellungen > Datenschutz & Sicherheit > Lokales Netzwerk das Programm ein, aus dem du es gestartet hast (z. B. Terminal), und starte es neu.',
@@ -98,7 +107,7 @@ export const de: Texts = {
     'custom-build': 'Eigener Build',
     'no-target-version': 'Keine Zielversion',
     unsupported: 'Nicht unterstützt',
-    unconfirmed: 'Noch nicht bestätigt',
+    unconfirmed: 'Unbestätigt',
     mismatch: 'Target passt nicht',
     failed: '3-mal fehlgeschlagen',
     queued: 'Wartet',

@@ -94,7 +94,7 @@ export function DeviceCard(props: {
   const address = [d.device, d.ip, d.mac && macText(d.mac)].filter(Boolean).join(' · ');
   const domains = d.domain?.split(', ');
   return (
-    <Card className={d.online ? undefined : 'opacity-70'}>
+    <Card className={d.online ? 'group' : 'group opacity-70'}>
       {d.state === 'flashing' && <span ref={ring} className="flash-ring" aria-hidden="true" />}
       {d.state === 'unconfirmed' && (
         <svg className="wait-edge" aria-hidden="true">
@@ -106,23 +106,25 @@ export function DeviceCard(props: {
           <div className="flex min-w-0 flex-col gap-1">
             <span className="flex items-start gap-1">
               <span className="font-semibold">{title(d)}</span>
+              {/* shown while the pointer is on the card or the keyboard reaches it; always on touch screens */}
               <Button
                 isIconOnly
                 size="sm"
                 variant="ghost"
                 aria-label={t.rename}
-                className="-mt-1 shrink-0 text-muted"
+                className="-mt-1 shrink-0 text-muted opacity-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:none)]:opacity-100"
                 onPress={() => setEditing(d.name ?? '')}
               >
                 <PencilIcon size={14} />
               </Button>
             </span>
-            <span className="text-sm text-muted">{[kind, d.name && shortProduct(d.product)].filter(Boolean).join(' · ')}</span>
           </div>
           <Chip size="sm" variant="soft" color={COLORS[d.state]} className="shrink-0">
             {t.states[d.state]}
           </Chip>
         </div>
+        {/* below the state, so it uses the card's full width */}
+        <span className="-mt-2.5 text-sm text-muted">{[kind, d.name && shortProduct(d.product)].filter(Boolean).join(' · ')}</span>
 
         {editing !== undefined && (
           <form

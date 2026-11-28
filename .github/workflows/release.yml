@@ -25,9 +25,6 @@ jobs:
             target: --linux
     runs-on: ${{ matrix.os }}
     steps:
-      # Windows runners check text files out with CRLF, which the tests' fixtures must not get
-      - run: git config --global core.autocrlf false
-        if: runner.os == 'Windows'
       - uses: actions/checkout@fbc6f3992d24b796d5a048ff273f7fcc4a7b6c09 # v5.1.0
         with:
           persist-credentials: false

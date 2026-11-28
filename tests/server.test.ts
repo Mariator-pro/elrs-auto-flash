@@ -157,7 +157,7 @@ describe('server', () => {
     expect((await until((x) => x.devices[0]?.state === 'current')).devices[0]!.lastAttempt).toBeUndefined();
   });
 
-  it('changes settings, keeps only major versions with a release, and keeps language, theme and search animation', async () => {
+  it('changes settings, keeps only major versions with a release, and keeps language, theme, search animation and the collapsed sidebar', async () => {
     const { api, p, until } = await server([]);
     await until((x) => x.majors.length > 0);
     expect((await api('POST', '/api/settings', { targetMajor: 9 })).data).toMatchObject({ code: 'invalidMajor' });
@@ -165,6 +165,12 @@ describe('server', () => {
     await api('POST', '/api/prefs', { theme: 'dark', lang: 'not a language', search: 'off' });
     await api('POST', '/api/prefs', { search: 'sonar' });
     expect(await loadSettings(p)).toMatchObject({ targetMajor: 3, ui: { lang: 'de', theme: 'dark', search: 'off' } });
+    await api('POST', '/api/prefs', { theme: 'system' });
+    expect((await loadSettings(p)).ui?.theme).toBe('system');
+    await api('POST', '/api/prefs', { sidebarCollapsed: 'yes' });
+    expect((await loadSettings(p)).ui?.sidebarCollapsed).toBeUndefined();
+    await api('POST', '/api/prefs', { sidebarCollapsed: true });
+    expect((await loadSettings(p)).ui).toMatchObject({ theme: 'system', search: 'off', sidebarCollapsed: true });
     await until((x) => x.target === '3.6.4');
     // a new target version gets its own line, the first one at the start does not
     const targets = async () => (await api<ActivityEntry[]>('GET', '/api/activity')).data.filter((a) => a.type === 'target');

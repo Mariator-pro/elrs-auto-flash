@@ -1,8 +1,9 @@
 import { createContext, use } from 'react';
 import type { SearchLook } from '../server/api.ts';
 import type { Lang, Texts } from './texts.ts';
+import type { Theme } from './appearance.ts';
 
-export type Theme = 'light' | 'dark';
+export type { Theme };
 
 export interface Prefs {
   t: Texts;
@@ -12,6 +13,8 @@ export interface Prefs {
   setTheme: (t: Theme) => void;
   search: SearchLook;
   setSearch: (s: SearchLook) => void;
+  sidebarCollapsed: boolean; // the sidebar shows only its icons
+  toggleSidebar: () => void;
 }
 
 export const PrefsContext = createContext<Prefs | null>(null);

@@ -35,6 +35,7 @@ async function watcher(settings: Partial<Settings> = {}) {
     flashed: [] as string[],
     events: [] as WatchEvent[],
     during: undefined as (() => Promise<void>) | undefined,
+    checked: '2026-10-25T12:00:00Z', // when the releases were last asked for
     // two ticks, each scanning, taking in what was found and starting a flash when one is due
     async round(minutes = 0) {
       t += minutes * 60_000;
@@ -51,7 +52,7 @@ async function watcher(settings: Partial<Settings> = {}) {
     now: () => t,
     scanEveryMs: 0,
     scan: async () => ({ devices: s.found, asked: 254, unreachable: 0 }),
-    releases: async () => ({ list: { checked: new Date(t).toISOString(), releases: RELEASES } }),
+    releases: async () => ({ list: { checked: s.checked, releases: RELEASES } }),
     prepare: async (ip, tag, _onDownload, manual) => {
       s.flashed.push(`${ip} ${tag}${manual ? ' by hand' : ''}`);
       const next = s.results[0];
@@ -252,6 +253,14 @@ describe('watcher', () => {
     await updateKnown(s.p, (list) => list.splice(0));
     await s.round();
     expect(s.events).toContainEqual({ kind: 'removed', key: 'A1' });
+  });
+
+  it('passes on a new check of the releases, also when the target version stays', async () => {
+    const s = await watcher({ autoUpdate: false });
+    await s.round();
+    s.checked = '2026-10-25T13:00:00Z';
+    await s.round(1);
+    expect(s.events.flatMap((e) => (e.kind === 'setup' ? [e.releases?.checked] : []))).toEqual(['2026-10-25T12:00:00Z', '2026-10-25T13:00:00Z']);
   });
 
   it('does not flash a device that left the network, and shows it again when it is back', async () => {

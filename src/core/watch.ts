@@ -187,7 +187,8 @@ export function createWatcher(p: Paths, onEvent: (e: WatchEvent) => void, deps: 
     }
     const settings = await loadSettings(p);
     const target = settings.targetMajor === undefined || !releases ? undefined : targetRelease(releases.releases, settings.targetMajor, settings.releaseCandidates);
-    const current = JSON.stringify([settings, target?.tag, !!releases]);
+    // also when only the time of the last check changed, which the sidebar shows
+    const current = JSON.stringify([settings, target?.tag, releases?.checked]);
     if (current !== setup) {
       setup = current;
       onEvent({ kind: 'setup', settings, releases, target });

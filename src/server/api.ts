@@ -179,8 +179,9 @@ export const SEARCH_LOOKS = ['scan', 'waves', 'radar', 'off'] as const;
 export type SearchLook = (typeof SEARCH_LOOKS)[number];
 export interface PrefsView {
   lang?: string;
-  theme?: 'light' | 'dark';
+  theme?: 'system' | 'light' | 'dark';
   search?: SearchLook;
+  sidebarCollapsed?: boolean; // the sidebar shows only its icons
 }
 export const PREFS_META = 'elrs-auto-flash-prefs';
 

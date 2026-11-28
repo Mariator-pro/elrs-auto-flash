@@ -19,7 +19,7 @@ npm run cli -- list
 
 `settings --target-major` sets the major version all devices are kept on (`none` clears it). Choose the one your radios run: radios and receivers need the same major version. `settings` alone shows the settings; `--release-candidates on` also counts release candidates, `--auto-update on|off` decides whether `watch` updates devices automatically (see below).
 
-`releases` asks GitHub for the ExpressLRS versions and shows the newest of each major version. `list` does that by itself when the last check is older than 6 hours, and keeps using the last list when GitHub cannot be reached.
+`releases` asks GitHub for the ExpressLRS versions and shows the newest of each major version. `list` does that by itself when the last check is older than an hour, and keeps using the last list when GitHub cannot be reached.
 
 `list` listens for 10 seconds (change it with `--time <seconds>`) and shows every ELRS device on the network with its product, firmware version, status (up to date, update available, newer than the target version, custom build, not supported below 3.0), target, regulatory domain and address. It finds devices in two ways: their mDNS announcement, and by asking every address in the computer's networks (only the 254 addresses around its own in larger networks), so devices also show up where mDNS is blocked.
 

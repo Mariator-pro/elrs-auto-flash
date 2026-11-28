@@ -7,6 +7,7 @@ import { noteRunning, running } from '../server/running.ts';
 import { startServer, type RunningServer } from '../server/server.ts';
 import { TEXTS, type Lang, type Texts } from '../ui/texts.ts';
 import { isOwnPage, isWebLink } from './links.ts';
+import { setAppMenu } from './menu.ts';
 import { appUpdates } from './update.ts';
 
 // Space kept free around the window when it opens, in points.
@@ -121,8 +122,9 @@ function openWindow(url: string, open: string): BrowserWindow {
     title: 'ELRS Auto Flash',
   });
   // Electron's default menu has nothing the app needs on Windows, and Windows draws a stray white line under it in dark mode;
-  // macOS keeps it for Cmd+Q and copy and paste
+  // macOS gets its own menu bar with Settings
   if (process.platform !== 'darwin') win.removeMenu();
+  setAppMenu(() => win, true);
   // links to GitHub, and the Web Flasher's guides, open in the browser, not in the app; other schemes not at all
   win.webContents.setWindowOpenHandler(({ url: to }) => {
     if (isWebLink(to)) void shell.openExternal(to);

@@ -3,6 +3,7 @@ import { Button, Card, ListBox, Select, Switch, ToggleButton, ToggleButtonGroup 
 import { SEARCH_LOOKS, type SearchLook, type StateView } from '../../server/api.ts';
 import { post } from '../api.ts';
 import { AboutCard } from '../components/About.tsx';
+import { LanguageCard } from '../components/LanguageCard.tsx';
 import { FolderIcon } from '../components/icons.tsx';
 import { usePrefs } from '../usePrefs.ts';
 
@@ -182,6 +183,7 @@ export function SettingsPage({ state, run, onAlwaysAutoUpdate }: { state: StateV
         </Card.Footer>
       </Card>
 
+      <LanguageCard />
       <AboutCard />
     </div>
   );
